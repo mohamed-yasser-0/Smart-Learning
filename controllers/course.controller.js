@@ -1,19 +1,15 @@
+const Courses = require("../models/courses.model")
 
 
-data = [
-    {
-        name: "mohamed",
-        age: 22
-    }
-]
 
-
-const gitCourses = (req, res) => {
-    res.send(data)
+const gitCourses = async (req, res) => {
+    const course = await Courses.find();
+    res.send(course)
 }
 
-const postCourses = (req, res) => {
-    data.push(req.body)
-    res.send(data)
+const postCourses = async (req, res) => {
+    const course = new Courses(req.body);
+    await course.save()
+    res.send("course was added")
 }
 module.exports = {gitCourses,postCourses}
