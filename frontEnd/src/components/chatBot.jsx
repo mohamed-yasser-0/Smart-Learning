@@ -16,26 +16,16 @@ import ChatBubbleOutlineRoundedIcon from "@mui/icons-material/ChatBubbleOutlineR
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import SendRoundedIcon from "@mui/icons-material/SendRounded";
 import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
-
-// ------------------------------------------------------------------
-// بيانات وهمية (Mock) — استبدلها بالـ request/response الحقيقي بتاعك
-// ------------------------------------------------------------------
-const FAKE_RESPONSES = [
-  "تمام، وصلتني رسالتك. ده رد تجريبي مؤقت لحد ما تربط الـ API الحقيقي.",
-  "بناءً على البيانات الوهمية، النتيجة المتوقعة هي 42%.",
-  "معلش، مقدرتش ألاقي بيانات كافية، بس دي إجابة وهمية عشان تكمل تصميم الواجهة.",
-  "تم تنفيذ طلبك بنجاح (وهميًا). الحالة: مكتمل ✅",
-];
+import { useMutation } from "@tanstack/react-query";
+import toast from "react-hot-toast";
+import axios from "axios";
 
 const INITIAL_MESSAGES = [
   {
     id: 1,
     role: "bot",
-    text: "أهلاً! أنا مساعدك الافتراضي. اسألني أي حاجة (كل الردود دلوقتي وهمية للتجربة).",
-  },
+text: "أهلاً! أنا مساعدك الذكي اسألني عن أي شيء، وسأحاول مساعدتك."  },
 ];
-
-let fakeIdCounter = 2;
 
 const ChatBot = () => {
   const theme = useTheme();
@@ -44,17 +34,21 @@ const ChatBot = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+
   const scrollRef = useRef(null);
 
+  // --------------------------------------------------
+  // API Mutation
+  // --------------------------------------------------
+
   const chatMutation = useMutation({
-    mutationFn: async (message) => {
+    mutationFn: async (summary) => {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
         "https://smart-learning-production-61a2.up.railway.app/api/ai/Summarize",
         {
-          message,
+          summary,
         },
         {
           headers: {
@@ -62,63 +56,79 @@ const ChatBot = () => {
           },
         },
       );
-
       return res.data;
     },
 
-    onSuccess: () => {
-      toast.success("تم الإرسال بنجاح");
+    // --------------------------------------------------
+    // لما الـ API يرجع بنجاح
+    // --------------------------------------------------
+
+    onSuccess: (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          role: "bot",
+          text: data?.respo,
+        },
+      ]);
+      setInput("");
+
+      toast.success("تم التلخيص بنجاح");
     },
 
+    // --------------------------------------------------
+    // لما يحصل Error
+    // --------------------------------------------------
+
     onError: (error) => {
-      toast.error(error.response?.data?.message || "حصل خطأ");
+      toast.error(error.response?.data?.message || "حصل خطأ أثناء التلخيص");
     },
   });
 
-  const courseHandleSubmit = (e) => {
-    e.preventDefault();
+  // --------------------------------------------------
+  // Submit
+  // --------------------------------------------------
 
-    chatMutation.mutate(title);
+  const handleSubmit = () => {
+    const trimmed = input.trim();
+
+    if (!trimmed) return;
+
+    // إضافة رسالة المستخدم إلى الشات
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        role: "user",
+        text: trimmed,
+      },
+    ]);
+
+    // إرسال الرسالة للـ API
+    chatMutation.mutate(trimmed);
   };
+
+  // --------------------------------------------------
+  // Enter
+  // --------------------------------------------------
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
+  // --------------------------------------------------
+  // Auto Scroll
+  // --------------------------------------------------
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
-
-  const handleSend = () => {
-    const trimmed = input.trim();
-    if (!trimmed) return;
-
-    const userMsg = { id: fakeIdCounter++, role: "user", text: trimmed };
-    setMessages((prev) => [...prev, userMsg]);
-    setInput("");
-    setIsTyping(true);
-
-    // -----------------------------------------------
-    // TODO: استبدل الجزء ده بالـ request الحقيقي بتاعك
-    // مثال:
-    // const res = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: trimmed }) });
-    // const data = await res.json();
-    // -----------------------------------------------
-    setTimeout(() => {
-      const fakeReply =
-        FAKE_RESPONSES[Math.floor(Math.random() * FAKE_RESPONSES.length)];
-      setMessages((prev) => [
-        ...prev,
-        { id: fakeIdCounter++, role: "bot", text: fakeReply },
-      ]);
-      setIsTyping(false);
-    }, 1100);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  }, [messages, chatMutation.isPending]);
 
   return (
     <Box
@@ -133,6 +143,10 @@ const ChatBot = () => {
         alignItems: "flex-end",
       }}
     >
+      {/* ==================================================
+          Chat Window
+      ================================================== */}
+
       <Grow
         in={open}
         unmountOnExit
@@ -152,7 +166,10 @@ const ChatBot = () => {
             mb: 2,
           }}
         >
-          {/* Header */}
+          {/* ==================================================
+              Header
+          ================================================== */}
+
           <Box
             sx={{
               px: 2,
@@ -164,17 +181,26 @@ const ChatBot = () => {
               color: "#fff",
             }}
           >
-            <Avatar sx={{ bgcolor: "#4C6EF5", width: 34, height: 34 }}>
+            <Avatar
+              sx={{
+                bgcolor: "#4C6EF5",
+                width: 34,
+                height: 34,
+              }}
+            >
               <SmartToyRoundedIcon fontSize="small" />
             </Avatar>
+
             <Box sx={{ flex: 1 }}>
               <Typography variant="subtitle2" sx={{ lineHeight: 1.2 }}>
                 المساعد الذكي
               </Typography>
+
               <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                متصل الآن (بيانات وهمية)
+                متصل الآن
               </Typography>
             </Box>
+
             <IconButton
               size="small"
               onClick={() => setOpen(false)}
@@ -184,7 +210,10 @@ const ChatBot = () => {
             </IconButton>
           </Box>
 
-          {/* Messages */}
+          {/* ==================================================
+              Messages
+          ================================================== */}
+
           <Box
             ref={scrollRef}
             sx={{
@@ -195,7 +224,7 @@ const ChatBot = () => {
               display: "flex",
               flexDirection: "column",
               gap: 1.2,
-              bgcolor: "#F8FAFC",
+              bgcolor: "background.paper",
             }}
           >
             {messages.map((msg) => (
@@ -215,18 +244,30 @@ const ChatBot = () => {
                       msg.role === "user"
                         ? "14px 14px 4px 14px"
                         : "14px 14px 14px 4px",
+
                     bgcolor: msg.role === "user" ? "#4C6EF5" : "#EEF1F6",
+
                     color: msg.role === "user" ? "#fff" : "#1E293B",
                   }}
                 >
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
                     {msg.text}
                   </Typography>
                 </Paper>
               </Box>
             ))}
 
-            {isTyping && (
+            {/* ==================================================
+                Loading
+            ================================================== */}
+
+            {chatMutation.isPending && (
               <Box
                 sx={{
                   alignSelf: "flex-start",
@@ -237,14 +278,18 @@ const ChatBot = () => {
                 }}
               >
                 <CircularProgress size={14} thickness={5} />
+
                 <Typography variant="caption" color="text.secondary">
-                  بيكتب...
+                  جاري الرد ...
                 </Typography>
               </Box>
             )}
           </Box>
 
-          {/* Input */}
+          {/* ==================================================
+              Input
+          ================================================== */}
+
           <Box
             sx={{
               px: 1.5,
@@ -253,45 +298,68 @@ const ChatBot = () => {
               gap: 1,
               alignItems: "center",
               borderTop: "1px solid #E2E8F0",
-              bgcolor: "#fff",
+              bgcolor: "background.paper",
             }}
           >
             <TextField
               fullWidth
               size="small"
-              placeholder="اكتب رسالتك..."
+              placeholder="Ask anything"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               variant="outlined"
+              disabled={chatMutation.isPending}
               sx={{
-                "& .MuiOutlinedInput-root": { borderRadius: "12px" },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: "12px",
+                },
               }}
             />
+
             <IconButton
-              onClick={handleSend}
-              disabled={!input.trim()}
+              onClick={handleSubmit}
+              disabled={chatMutation.isPending || !input.trim()}
               sx={{
                 bgcolor: "#4C6EF5",
                 color: "#fff",
-                "&:hover": { bgcolor: "#3B5BDB" },
-                "&.Mui-disabled": { bgcolor: "#CBD5E1", color: "#fff" },
+
+                "&:hover": {
+                  bgcolor: "#3B5BDB",
+                },
+
+                "&.Mui-disabled": {
+                  bgcolor: "#CBD5E1",
+                  color: "#fff",
+                },
               }}
             >
-              <SendRoundedIcon fontSize="small" />
+              {chatMutation.isPending ? (
+                <CircularProgress size={20} sx={{ color: "#fff" }} />
+              ) : (
+                <SendRoundedIcon fontSize="small" />
+              )}
             </IconButton>
           </Box>
         </Paper>
       </Grow>
 
-      {/* Floating toggle button */}
+      {/* ==================================================
+          Floating Button
+      ================================================== */}
+
       <Fab
         onClick={() => setOpen((prev) => !prev)}
         sx={{
           bgcolor: "#4C6EF5",
           color: "#fff",
+
           transition: "transform 0.2s ease",
-          "&:hover": { bgcolor: "#3B5BDB", transform: "scale(1.06)" },
+
+          "&:hover": {
+            bgcolor: "#3B5BDB",
+            transform: "scale(1.06)",
+          },
         }}
       >
         {open ? <CloseRoundedIcon /> : <ChatBubbleOutlineRoundedIcon />}
