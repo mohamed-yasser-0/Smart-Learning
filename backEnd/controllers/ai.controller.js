@@ -33,6 +33,7 @@ const getYoutubeTranscript = async (req, res) => {
                 message: "YouTube URL is required",
             });
         }
+
         const transcript = await fetchTranscript(url);
 
         const text = transcript
@@ -50,9 +51,20 @@ const getYoutubeTranscript = async (req, res) => {
             .replace(/\s+/g, " ")
             .trim();
 
+        // Duration
+        const lastItem = transcript[transcript.length - 1];
+
+        const duration = lastItem
+            ? lastItem.offset + lastItem.duration
+            : 0;
+
+        const durationInSeconds = Math.floor(duration / 1000);
+
         return res.status(200).json({
             text,
+            duration: durationInSeconds,
         });
+
     } catch (error) {
         console.error(error);
 

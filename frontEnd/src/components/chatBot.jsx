@@ -24,7 +24,8 @@ const INITIAL_MESSAGES = [
   {
     id: 1,
     role: "bot",
-text: "أهلاً! أنا مساعدك الذكي اسألني عن أي شيء، وسأحاول مساعدتك."  },
+    text: "أهلاً! أنا مساعدك الذكي اسألني عن أي شيء، وسأحاول مساعدتك.",
+  },
 ];
 
 const ChatBot = () => {
@@ -106,7 +107,16 @@ const ChatBot = () => {
     ]);
 
     // إرسال الرسالة للـ API
-    chatMutation.mutate(trimmed);
+    chatMutation.mutate(`You are an educational assistant for Smart Learning Platform.
+
+Your job is to help students understand courses,
+        lessons, quizzes, and concepts.
+
+Explain concepts simply and clearly.
+If the student asks for an explanation, give examples.
+Do not make up information.
+
+Student message:${trimmed}`);
   };
 
   // --------------------------------------------------

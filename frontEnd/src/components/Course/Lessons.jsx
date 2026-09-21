@@ -14,6 +14,7 @@ import {
   useTheme,
   useMediaQuery,
   CircularProgress,
+  TextField,
 } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import PlayCircleIcon from "@mui/icons-material/PlayCircleRounded";
@@ -30,6 +31,9 @@ import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import { CloudUploadRounded, Tune } from "@mui/icons-material";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import SmartToyRounded from "@mui/icons-material/SmartToyRounded";
+import SendRounded from "@mui/icons-material/SendRounded";
+import { useRef } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import {
@@ -74,6 +78,9 @@ export default function CourseLessons() {
   const [quizResult, setQuizResult] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const [chatMessages, setChatMessages] = useState([
+    { role: "assistant", text: "أهلاً! أسألني عن محتوى الدرس أو اطلب ملخص." },
+  ]);
   const [quiz, setQuiz] = useState({
     currentQuestion: 0,
     timeLeft: 60,
@@ -268,6 +275,39 @@ export default function CourseLessons() {
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     );
+  };
+
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, chatLoading]);
+
+  const handleChatSend = async () => {
+    const text = chatInput.trim();
+    if (!text || chatLoading) return;
+
+    const next = [...chatMessages, { role: "user", text }];
+    setChatMessages(next);
+    setChatInput("");
+    setChatLoading(true);
+
+    try {
+      // هنا حط الكول بتاعك اللي بيبعت المحتوى (activeLesson) + السؤال للـ AI ويرجع الرد
+      const reply = "..."; // استبدلها بالرد الحقيقي
+      setChatMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "حصل خطأ، حاول تاني." },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
   };
   return (
     <Box
@@ -614,6 +654,186 @@ export default function CourseLessons() {
                   </Button>
                 </form>
               </Stack>
+
+              {/* ================= AI Chat: lesson summary ================= */}
+              <Box
+                sx={{
+                  mt: 3,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "18px",
+                  overflow: "hidden",
+                  bgcolor: "background.paper",
+                }}
+              >
+                {/* Header */}
+                <Stack
+                  direction="row"
+                  spacing={1.2}
+                  sx={{
+                    alignItems: "center",
+                    px: 2.5,
+                    py: 1.8,
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                    bgcolor: alpha(theme.palette.primary.main, 0.04),
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      bgcolor: alpha(theme.palette.primary.main, 0.15),
+                      color: "primary.main",
+                    }}
+                  >
+                    <SmartToyRounded fontSize="small" />
+                  </Avatar>
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "text.primary",
+                      }}
+                    >
+                      مساعد الدرس
+                    </Typography>
+                    <Typography
+                      sx={{ fontSize: 11.5, color: "text.secondary" }}
+                    >
+                      يلخصلك الفيديو ويجاوب على أسئلتك
+                    </Typography>
+                  </Box>
+                </Stack>
+
+                {/* Messages */}
+                <Box
+                  ref={chatScrollRef}
+                  sx={{
+                    maxHeight: 360,
+                    minHeight: 180,
+                    overflowY: "auto",
+                    px: 2.5,
+                    py: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1.5,
+                  }}
+                >
+                  {chatMessages.map((m, i) => (
+                    <Stack
+                      key={i}
+                      direction="row"
+                      sx={{
+                        justifyContent:
+                          m.role === "user" ? "flex-end" : "flex-start",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          maxWidth: "78%",
+                          px: 1.8,
+                          py: 1.1,
+                          borderRadius: "14px",
+                          borderBottomRightRadius: m.role === "user" ? 4 : 14,
+                          borderBottomLeftRadius:
+                            m.role === "assistant" ? 4 : 14,
+                          bgcolor:
+                            m.role === "user"
+                              ? "primary.main"
+                              : alpha(theme.palette.text.primary, 0.04),
+                          color:
+                            m.role === "user"
+                              ? "primary.contrastText"
+                              : "text.primary",
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: 13.5,
+                            lineHeight: 1.7,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {m.text}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  ))}
+
+                  {chatLoading && (
+                    <Stack
+                      direction="row"
+                      sx={{ justifyContent: "flex-start" }}
+                    >
+                      <Box
+                        sx={{
+                          px: 1.8,
+                          py: 1.1,
+                          borderRadius: "14px",
+                          borderBottomLeftRadius: 4,
+                          bgcolor: alpha(theme.palette.text.primary, 0.04),
+                        }}
+                      >
+                        <CircularProgress size={16} thickness={5} />
+                      </Box>
+                    </Stack>
+                  )}
+                </Box>
+
+                {/* Input */}
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "flex-end",
+                    px: 2,
+                    py: 1.5,
+                    borderTop: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  <TextField
+                    fullWidth
+                    multiline
+                    maxRows={4}
+                    placeholder="اكتب سؤالك... أو اطلب ملخص للفيديو"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleChatSend();
+                      }
+                    }}
+                    size="small"
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: "12px",
+                        fontSize: 13.5,
+                      },
+                    }}
+                  />
+                  <IconButton
+                    onClick={handleChatSend}
+                    disabled={chatLoading || !chatInput.trim()}
+                    sx={{
+                      bgcolor: "primary.main",
+                      color: "primary.contrastText",
+                      borderRadius: "10px",
+                      "&:hover": { bgcolor: "primary.dark" },
+                      "&.Mui-disabled": {
+                        bgcolor: alpha(theme.palette.text.primary, 0.08),
+                        color: "text.disabled",
+                      },
+                    }}
+                  >
+                    <SendRounded fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+              {/* =============== end AI Chat =============== */}
             </>
           )}
           {activeLesson.type === "quiz" && (
