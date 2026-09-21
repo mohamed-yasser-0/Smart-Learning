@@ -81,10 +81,13 @@ export default function CourseLessons() {
   const [chatMessages, setChatMessages] = useState([
     { role: "assistant", text: "أهلاً! أسألني عن محتوى الدرس أو اطلب ملخص." },
   ]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const [quiz, setQuiz] = useState({
     currentQuestion: 0,
     timeLeft: 60,
   });
+  const chatScrollRef = useRef(null);
 
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { id } = useParams();
@@ -192,7 +195,11 @@ export default function CourseLessons() {
       quizScore: quizResult,
     });
   };
-
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages, chatLoading]);
   // شكل الداتا الفعلي: [{ _id, title, description, type, order, isFree, video: { url, provider }, course, ... }]
   const lessons = data?.data?.lesson;
   if (!lessons?.length)
@@ -276,16 +283,6 @@ export default function CourseLessons() {
       />
     );
   };
-
-  const [chatInput, setChatInput] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-  const chatScrollRef = useRef(null);
-
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [chatMessages, chatLoading]);
 
   const handleChatSend = async () => {
     const text = chatInput.trim();

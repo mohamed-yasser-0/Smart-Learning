@@ -3,6 +3,8 @@ const asyncWrapper = require("../middleware/asyncWrapper");
 const ErrorHandel = require("../utils/appError");
 const { SUCCESS, FAIL } = require("../utils/httpStatusText");
 const cloudinary = require("../config/cloudinary");
+const { fetchTranscript } = require("youtube-transcript");
+
 const gitLessons = async (req, res) => {
     const { courseId } = req.params
     const lesson = await Lesson.find({ course: courseId }, { "__v": false });
@@ -24,6 +26,8 @@ const postLesson = asyncWrapper(async (req, res) => {
     const lesson = new Lesson(req.body);
     lesson.course = courseId;
 
+
+
     if (req.file) {
         const result = await cloudinary.api.resource(
             req.file.filename,
@@ -33,20 +37,48 @@ const postLesson = asyncWrapper(async (req, res) => {
             }
         );
 
-        console.log("Duration:", result.duration);
-
         lesson.video = {
             url: req.file.path,
             provider: "cloudinary",
             duration: result.duration
         };
     }
+    if (lesson.video.provider === "youTube") {
+        const {url} = lesson.video
+        const transcript = await fetchTranscript(url);
+        const text = transcript
+            .map((item) => {
+                if (typeof item.text === "string") {
+                    return item.text;
+                }
 
+                return "";
+            })
+            .join(" ")
+            .replace(/\[موسيقى\]/g, "")
+            .replace(/\[object Object\]/g, "")
+            .replace(/->>/g, "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        // Duration
+        const lastItem = transcript[transcript.length - 1];
+
+        const duration = lastItem
+            ? lastItem.offset + lastItem.duration
+            : 0;
+
+        const durationInSeconds = Math.floor(duration / 1000);
+        lesson.video = {
+            duration: durationInSeconds,
+            text: text
+        };
+    }
     await lesson.save();
 
     res.status(201).send({
         status: SUCCESS,
-        data: lesson
+        data: lesson,
     });
 });
 const patchLesson = async (req, res) => {

@@ -11,6 +11,7 @@ const postSummarie = async (req, res) => {
     const client = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
     });
+
     const response = await client.responses.create({
         model: "gpt-5.6-luna",
         input: `
