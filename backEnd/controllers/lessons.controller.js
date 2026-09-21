@@ -44,7 +44,7 @@ const postLesson = asyncWrapper(async (req, res) => {
         };
     }
     if (lesson.video.provider === "youTube") {
-        const {url} = lesson.video
+        const { url } = lesson.video
         const transcript = await fetchTranscript(url);
         const text = transcript
             .map((item) => {
@@ -70,6 +70,8 @@ const postLesson = asyncWrapper(async (req, res) => {
 
         const durationInSeconds = Math.floor(duration / 1000);
         lesson.video = {
+            url,
+            provider: lesson.video.provider,
             duration: durationInSeconds,
             text: text
         };

@@ -67,6 +67,13 @@ const quiz = {
     { letter: "D", text: "PCA" },
   ],
 };
+const INITIAL_MESSAGES = [
+  {
+    id: 1,
+    role: "bot",
+    text: "أهلاً! أنا مساعدك الذكي اسألني عن أي شيء، وسأحاول مساعدتك.",
+  },
+];
 export default function CourseLessons() {
   const theme = useTheme();
   const [tab, setTab] = useState(0);
@@ -83,6 +90,9 @@ export default function CourseLessons() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const scrollRef = useRef(null);
+
   const [quiz, setQuiz] = useState({
     currentQuestion: 0,
     timeLeft: 60,
@@ -202,6 +212,55 @@ export default function CourseLessons() {
   }, [chatMessages, chatLoading]);
   // شكل الداتا الفعلي: [{ _id, title, description, type, order, isFree, video: { url, provider }, course, ... }]
   const lessons = data?.data?.lesson;
+
+  const chatMutation = useMutation({
+    mutationFn: async (summary) => {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.post(
+        "https://smart-learning-production-61a2.up.railway.app/api/ai/Summarize",
+        {
+          summary,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      return res.data;
+    },
+
+    // --------------------------------------------------
+    // لما الـ API يرجع بنجاح
+    // --------------------------------------------------
+
+    onSuccess: (data) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          role: "bot",
+          text: data?.respo,
+        },
+      ]);
+      setInput("");
+    },
+
+    // --------------------------------------------------
+    // لما يحصل Error
+    // --------------------------------------------------
+
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "حصل خطأ أثناء التلخيص");
+    },
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, chatMutation.isPending]);
   if (!lessons?.length)
     return (
       <Button
@@ -229,6 +288,26 @@ export default function CourseLessons() {
   // completedLessons.size > lessons.length - 1
   //   ? lessons.length - 1
   //   : completedLessons.size
+
+  const handleSubmit = () => {
+    const trimmed = chatInput.trim();
+
+    if (!trimmed) return;
+
+    // إضافة رسالة المستخدم إلى الشات
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        role: "user",
+        text: trimmed,
+      },
+    ]);
+
+    // إرسال الرسالة للـ API
+    chatMutation.mutate(`${activeLesson?.video?.text}+${trimmed}`);
+  };
+  console.log(activeLesson)
   const completedCount = lessons.filter((l) =>
     completedLessons.has(l._id),
   ).length;
@@ -243,6 +322,7 @@ export default function CourseLessons() {
     setCompletedLessons((prev) => new Set(prev).add(activeLesson._id));
   };
   const renderPlayer = () => {
+    console.log(activeLesson?.video?.provider);
     if (activeLesson.type !== "video" || !activeLesson.video?.url) {
       return (
         <IconButton
@@ -260,14 +340,27 @@ export default function CourseLessons() {
       );
     }
 
-    if (activeLesson.video.provider === "youtube") {
-      const videoId = activeLesson.video.url.split("v=")[1]?.split("&")[0];
+    if (activeLesson.video.provider === "youTube") {
+      const url = activeLesson.video.url;
+
+      let videoId;
+
+      if (url.includes("youtu.be")) {
+        videoId = new URL(url).pathname.slice(1);
+      } else {
+        videoId = new URL(url).searchParams.get("v");
+      }
+
       return (
         <iframe
           key={activeLesson._id}
           src={`https://www.youtube.com/embed/${videoId}`}
           title={activeLesson.title}
-          style={{ width: "100%", height: "100%", border: 0 }}
+          style={{
+            width: "100%",
+            height: "100%",
+            border: 0,
+          }}
           allowFullScreen
         />
       );
@@ -718,7 +811,7 @@ export default function CourseLessons() {
                     gap: 1.5,
                   }}
                 >
-                  {chatMessages.map((m, i) => (
+                  {messages.map((m, i) => (
                     <Stack
                       key={i}
                       direction="row"
@@ -801,7 +894,7 @@ export default function CourseLessons() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        handleChatSend();
+                        handleSubmit();
                       }
                     }}
                     size="small"
@@ -813,7 +906,7 @@ export default function CourseLessons() {
                     }}
                   />
                   <IconButton
-                    onClick={handleChatSend}
+                    onClick={handleSubmit}
                     disabled={chatLoading || !chatInput.trim()}
                     sx={{
                       bgcolor: "primary.main",

@@ -54,7 +54,7 @@ const lessonSchema = mongoose.Schema({
         url: String,
         provider: {
             type: String,
-            enum: ["youtube", "vimeo", "s3", "cloudinary"]
+            enum: ["youTube", "vimeo", "s3", "cloudinary"]
         },
         duration: Number,
         text: String

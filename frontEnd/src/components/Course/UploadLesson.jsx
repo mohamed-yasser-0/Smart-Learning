@@ -55,7 +55,10 @@ export default function UploadLesson() {
 
   const navigate = useNavigate();
   const { id: courseId } = useParams();
-
+  const video = {
+    url: "https://youtu.be/ZkHj91CKoVE?si=gj8By5lLuQsBBZcT",
+    provider: "youTube",
+  };
   const isQuiz = type === "quiz";
 
   const LessonMutation = useMutation({
@@ -123,22 +126,22 @@ export default function UploadLesson() {
       LessonMutation.mutate(quizPayload);
       return;
     }
-
-    // ✅ فورم الدرس العادي - نفس اللوجيك القديم بالظبط، من غير أي تغيير
-    const formData = new FormData();
-
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("order", order);
-    formData.append("type", type);
-    formData.append("isFree", isFree);
-    formData.append("course", courseId);
-
-    if (videoFile) {
-      formData.append("video", videoFile);
-    }
-
-    LessonMutation.mutate(formData);
+    const LessonPayload = {
+      title,
+      description,
+      order,
+      type,
+      isFree,
+      course: courseId,
+      if(videoFile) {
+        video: videoFile;
+      },
+      video: {
+        url: "https://youtu.be/ZkHj91CKoVE?si=gj8By5lLuQsBBZcT",
+        provider: "youTube",
+      },
+    };
+    LessonMutation.mutate(LessonPayload);
   };
 
   const handleVideo = (e) => {
