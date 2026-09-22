@@ -201,6 +201,7 @@ const StatCard = ({ icon, value, label, iconBg }) => (
 );
 
 export default function Home() {
+  
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["progress"],
     queryFn: async () => {
@@ -285,7 +286,7 @@ export default function Home() {
               gap: 1,
             }}
           >
-            Good morning, Alex 👋
+            Good morning, {} 👋
           </Typography>
           <Typography
             sx={{ fontSize: "0.95rem", color: "text.secondary", mt: 0.6 }}
@@ -318,7 +319,7 @@ export default function Home() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             icon={<AccessTime sx={{ fontSize: 22 }} />}
-            value={`${sub ?? 0} hrs`}
+            value={`${Math.round(sub/60) ?? 0} hrs`}
             label="Hours Learned"
             iconBg="#3F51B5"
           />
@@ -342,7 +343,7 @@ export default function Home() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             icon={<LocalFireDepartment sx={{ fontSize: 22 }} />}
-            value="23 days"
+            value="1 days"
             label="Day Streak"
             iconBg="#FF9800"
           />

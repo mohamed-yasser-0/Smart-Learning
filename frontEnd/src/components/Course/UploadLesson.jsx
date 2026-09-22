@@ -45,6 +45,7 @@ export default function UploadLesson() {
   const [description, setDescription] = useState("");
   const [order, setOrder] = useState(1);
   const [type, setType] = useState("video");
+  const [vUrl, setVUrl] = useState("");
   const [isFree, setIsFree] = useState(false);
   const [videoFile, setVideoFile] = useState(null);
 
@@ -56,7 +57,7 @@ export default function UploadLesson() {
   const navigate = useNavigate();
   const { id: courseId } = useParams();
   const video = {
-    url: "https://youtu.be/ZkHj91CKoVE?si=gj8By5lLuQsBBZcT",
+    url: vUrl,
     provider: "youTube",
   };
   const isQuiz = type === "quiz";
@@ -632,6 +633,15 @@ export default function UploadLesson() {
                   </>
                 )}
               </Box>
+              <Box sx={{mt:3}}/>
+              <TextField
+                fullWidth
+                type="string"
+                label="رفع لينك يوتيوب"
+                value={vUrl}
+                onChange={(e) => setVUrl(String(e.target.value))}
+                sx={fieldSx}
+              />
             </Box>
           )}
 

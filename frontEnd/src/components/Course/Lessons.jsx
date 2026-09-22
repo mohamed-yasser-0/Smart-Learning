@@ -31,6 +31,7 @@ import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import { CloudUploadRounded, Tune } from "@mui/icons-material";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import SmartToyRounded from "@mui/icons-material/SmartToyRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import { useRef } from "react";
@@ -43,6 +44,7 @@ import {
   CssBaseline,
 } from "@mui/material";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
+import { lime } from "@mui/material/colors";
 // ---- بيانات الكورس نفسه (لسه مصدرها مش من الـ lessons endpoint) ----
 const course = {
   title: "React & TypeScript Mastery",
@@ -74,6 +76,7 @@ const INITIAL_MESSAGES = [
     text: "أهلاً! أنا مساعدك الذكي اسألني عن أي شيء، وسأحاول مساعدتك.",
   },
 ];
+let limit = 0;
 export default function CourseLessons() {
   const theme = useTheme();
   const [tab, setTab] = useState(0);
@@ -88,6 +91,7 @@ export default function CourseLessons() {
   const [chatMessages, setChatMessages] = useState([
     { role: "assistant", text: "أهلاً! أسألني عن محتوى الدرس أو اطلب ملخص." },
   ]);
+  const bottomRef = useRef(null);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
@@ -205,11 +209,11 @@ export default function CourseLessons() {
       quizScore: quizResult,
     });
   };
-  useEffect(() => {
-    if (chatScrollRef.current) {
-      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-    }
-  }, [chatMessages, chatLoading]);
+  // useEffect(() => {
+  //   if (chatScrollRef.current) {
+  //     chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+  //   }
+  // }, [chatMessages, chatLoading]);
   // شكل الداتا الفعلي: [{ _id, title, description, type, order, isFree, video: { url, provider }, course, ... }]
   const lessons = data?.data?.lesson;
 
@@ -289,25 +293,37 @@ export default function CourseLessons() {
   //   ? lessons.length - 1
   //   : completedLessons.size
 
-  const handleSubmit = () => {
-    const trimmed = chatInput.trim();
+  const handleSubmit = (trm) => {
+    const trimmed = chatInput.trim() || trm;
 
     if (!trimmed) return;
-
-    // إضافة رسالة المستخدم إلى الشات
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        role: "user",
-        text: trimmed,
-      },
-    ]);
-
-    // إرسال الرسالة للـ API
-    chatMutation.mutate(`${activeLesson?.video?.text}+${trimmed}`);
+    {
+      // إضافة رسالة المستخدم إلى الشات
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now(),
+          role: "user",
+          text: !trm ? trimmed : "ملخص الدرس",
+        },
+      ]);
+      // ${activeLesson?.video?.text}+
+      // إرسال الرسالة للـ API
+      chatMutation.mutate(`${trimmed}`);
+      setChatInput("");
+    }
+    setTimeout(() => {
+      bottomRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+      chatScrollRef.current?.scrollTo({
+        top: chatScrollRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 100);
   };
-  console.log(activeLesson)
+  console.log(activeLesson);
   const completedCount = lessons.filter((l) =>
     completedLessons.has(l._id),
   ).length;
@@ -375,29 +391,6 @@ export default function CourseLessons() {
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
       />
     );
-  };
-
-  const handleChatSend = async () => {
-    const text = chatInput.trim();
-    if (!text || chatLoading) return;
-
-    const next = [...chatMessages, { role: "user", text }];
-    setChatMessages(next);
-    setChatInput("");
-    setChatLoading(true);
-
-    try {
-      // هنا حط الكول بتاعك اللي بيبعت المحتوى (activeLesson) + السؤال للـ AI ويرجع الرد
-      const reply = "..."; // استبدلها بالرد الحقيقي
-      setChatMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-    } catch {
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: "حصل خطأ، حاول تاني." },
-      ]);
-    } finally {
-      setChatLoading(false);
-    }
   };
   return (
     <Box
@@ -500,7 +493,6 @@ export default function CourseLessons() {
 
                 {renderPlayer()}
               </Box>
-
               {/* Title row */}
               <Stack
                 direction="row"
@@ -534,6 +526,29 @@ export default function CourseLessons() {
                 </Box>
                 <Stack direction="row" spacing={1}>
                   <IconButton
+                    size="medium"
+                    startIcon={<AutoAwesomeIcon />}
+                    onClick={() => {
+                      if (limit >= 1) {
+                        toast.success("the limit was 0");
+                        return;
+                      }
+                      handleSubmit(
+                        `${activeLesson?.video?.text}اعملي بقا ملخص سهل للفهم`,
+                      );
+                      ++limit;
+                    }}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: "10px",
+                      color: "text.secondary",
+                    }}
+                  >
+                    <AutoAwesomeIcon sx={{ mr: 1 }} />
+                    {" ملخص الفيديو"}
+                  </IconButton>
+                  {/* <IconButton
                     size="small"
                     sx={{
                       border: "1px solid",
@@ -554,7 +569,7 @@ export default function CourseLessons() {
                     }}
                   >
                     <DownloadRounded fontSize="small" />
-                  </IconButton>
+                  </IconButton> */}
                 </Stack>
               </Stack>
 
@@ -851,7 +866,6 @@ export default function CourseLessons() {
                       </Box>
                     </Stack>
                   ))}
-
                   {chatLoading && (
                     <Stack
                       direction="row"
@@ -868,8 +882,9 @@ export default function CourseLessons() {
                       >
                         <CircularProgress size={16} thickness={5} />
                       </Box>
+                      <div ref={chatScrollRef} />
                     </Stack>
-                  )}
+                  )}{" "}
                 </Box>
 
                 {/* Input */}
@@ -926,6 +941,7 @@ export default function CourseLessons() {
               {/* =============== end AI Chat =============== */}
             </>
           )}
+          <div ref={bottomRef} />
           {activeLesson.type === "quiz" && (
             <Box
               sx={{
