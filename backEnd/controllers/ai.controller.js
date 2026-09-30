@@ -16,7 +16,7 @@ const postSummarie = async (req, res) => {
 
         const interaction = await client.interactions.create({
             model: "gemini-3.5-flash-lite",
-            input: "أهلا",
+            input: `${req.body.summary}`,
             generation_config: {
                 thinking_level: "low",
                 max_output_tokens: 65536,
