@@ -3,26 +3,43 @@ const Lesson = require("../models/lesson.model.js");
 const ErrorHandel = require("../utils/appError");
 const { SUCCESS, FAIL } = require("../utils/httpStatusText");
 const { fetchTranscript } = require("youtube-transcript");
-const OpenAI = require("openai");
-
+const { GoogleGenAI } = require("@google/genai");
 
 
 const postSummarie = async (req, res) => {
-    const client = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-    });
+    try {
+        const client = new GoogleGenAI({
+            apiKey: process.env.GEMINI_API_KEY,
+        });
 
-    const response = await client.responses.create({
-        model: "gpt-5.6-luna",
-        input: `
-            ${req.body.summary}`
-    });
-    const respo = response.output_text
+        const start = Date.now();
 
-    res.send({
-        status: SUCCESS,
-        respo
-    });
+        const interaction = await client.interactions.create({
+            model: "gemini-3.5-flash-lite",
+            input: "أهلا",
+            generation_config: {
+                thinking_level: "low",
+                max_output_tokens: 65536,
+            },
+        });
+
+        console.log(`Gemini took ${Date.now() - start}ms`);
+
+        const respo = interaction.output_text;
+
+        res.send({
+            status: SUCCESS,
+            respo,
+        });
+
+    } catch (error) {
+        console.error("Gemini Error:", error);
+
+        res.status(500).send({
+            status: FAIL,
+            message: error.message,
+        });
+    }
 };
 
 const getYoutubeTranscript = async (req, res) => {
