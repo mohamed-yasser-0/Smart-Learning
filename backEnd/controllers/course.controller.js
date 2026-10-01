@@ -5,6 +5,10 @@ const { SUCCESS, FAIL } = require("../utils/httpStatusText");
 
 
 
+const gitMyCourses = async (req, res) => {
+    const course = await Courses.find({ userId: req.user.id }, { "__v": false });
+    res.send({ status: SUCCESS, data: { course } })
+}
 const gitCourses = async (req, res) => {
     const course = await Courses.find({}, { "__v": false });
     res.send({ status: SUCCESS, data: { course } })
@@ -20,6 +24,7 @@ const gitSingle = asyncWrapper(async (req, res, next) => {
 // نسيت الاويت يا شاطر
 const postCourses = async (req, res) => {
     const course = new Courses({
+        userId: req.user.id,
         ...req.body,
         thumbnail: req.file?.path
     });
@@ -48,4 +53,4 @@ const DeleteCourses = async (req, res) => {
     }
     res.send({ status: SUCCESS })
 }
-module.exports = { gitCourses, gitSingle, postCourses, DeleteCourses, patchCourses }
+module.exports = { gitCourses, gitSingle, postCourses, DeleteCourses, patchCourses, gitMyCourses }

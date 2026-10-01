@@ -194,8 +194,6 @@ export default function CourseLessons() {
     },
 
     onSuccess: async () => {
-      toast.success("تم رفع الإنجاز");
-
       await refetchProgress();
     },
 
@@ -209,11 +207,6 @@ export default function CourseLessons() {
       quizScore: quizResult,
     });
   };
-  // useEffect(() => {
-  //   if (chatScrollRef.current) {
-  //     chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
-  //   }
-  // }, [chatMessages, chatLoading]);
   // شكل الداتا الفعلي: [{ _id, title, description, type, order, isFree, video: { url, provider }, course, ... }]
   const lessons = data?.data?.lesson;
 
@@ -240,6 +233,7 @@ export default function CourseLessons() {
     // --------------------------------------------------
 
     onSuccess: (data) => {
+      setChatLoading(false);
       setMessages((prev) => [
         ...prev,
         {
@@ -249,14 +243,6 @@ export default function CourseLessons() {
         },
       ]);
       setInput("");
-    },
-
-    // --------------------------------------------------
-    // لما يحصل Error
-    // --------------------------------------------------
-
-    onError: (error) => {
-      toast.error(error.response?.data?.message || "حصل خطأ أثناء التلخيص");
     },
   });
 
@@ -294,6 +280,7 @@ export default function CourseLessons() {
   //   : completedLessons.size
 
   const handleSubmit = (trm) => {
+    setChatLoading("true");
     const trimmed = chatInput.trim() || trm;
 
     if (!trimmed) return;
@@ -529,12 +516,12 @@ export default function CourseLessons() {
                     size="medium"
                     startIcon={<AutoAwesomeIcon />}
                     onClick={() => {
-                      if (limit >= 1) {
-                        toast.success("the limit was 0");
+                      if (limit >= 3) {
+                        toast.error("the limit was 0");
                         return;
                       }
                       handleSubmit(
-                        `${activeLesson?.video?.text}اعملي بقا ملخص سهل للفهم`,
+                        `${activeLesson?.video?.text}اعملي بقا ملخص سهل للفهم بدون اموجي و مرتب`,
                       );
                       ++limit;
                     }}
@@ -814,7 +801,7 @@ export default function CourseLessons() {
 
                 {/* Messages */}
                 <Box
-                  ref={chatScrollRef}
+                  ref={scrollRef}
                   sx={{
                     maxHeight: 360,
                     minHeight: 180,
@@ -882,9 +869,8 @@ export default function CourseLessons() {
                       >
                         <CircularProgress size={16} thickness={5} />
                       </Box>
-                      <div ref={chatScrollRef} />
                     </Stack>
-                  )}{" "}
+                  )}
                 </Box>
 
                 {/* Input */}
@@ -921,8 +907,10 @@ export default function CourseLessons() {
                     }}
                   />
                   <IconButton
-                    onClick={handleSubmit}
-                    disabled={chatLoading || !chatInput.trim()}
+                    onClick={() => {
+                      handleSubmit();
+                    }}
+                    disabled={chatMutation.isPending || !chatInput.trim()}
                     sx={{
                       bgcolor: "primary.main",
                       color: "primary.contrastText",

@@ -51,7 +51,6 @@ const LEVEL_STYLE = { bg: "rgba(255,255,255,0.08)", color: "#B7BDD6" };
 // Mock course data (mirrors the screenshot)
 // ---------------------------------------------------------------------------
 
-
 const FILTERS = ["All", "Data Science", "Frontend", "Backend", "Design"];
 
 // ---------------------------------------------------------------------------
@@ -247,10 +246,19 @@ export default function CourseLibrary() {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["users"],
+
     queryFn: async () => {
+      const token = localStorage.getItem("token");
+
       const res = await axios.get(
-        "https://smart-learning-production-61a2.up.railway.app/api/courses",
+        "https://smart-learning-production-61a2.up.railway.app/api/courses/mycourses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       );
+
       return res.data;
     },
   });
@@ -260,10 +268,10 @@ export default function CourseLibrary() {
   if (isError) return <p>حصل خطأ: {error.message}</p>;
 
   const filtered = courses.filter((c) => {
-    const matchesFilter =
-      activeFilter === "All" ||
-      c.category === activeFilter ||
-      c.title === activeFilter;
+    const matchesFilter = activeFilter;
+    // ||
+    // c.category === activeFilter ||
+    // c.title === activeFilter;
     const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
@@ -306,7 +314,7 @@ export default function CourseLibrary() {
                 "& .MuiTabs-indicator": { display: "none" },
               }}
             >
-              {["All Courses", "My Courses"].map((label, i) => (
+              {["My Courses", "All Courses"].map((label, i) => (
                 <Tab
                   key={label}
                   label={label}
@@ -387,7 +395,7 @@ export default function CourseLibrary() {
             <TuneIcon fontSize="small" />
           </IconButton>
 
-          {FILTERS.map((f) => (
+          {/* {FILTERS.map((f) => (
             <Chip
               key={f}
               label={f}
@@ -403,7 +411,7 @@ export default function CourseLibrary() {
                 px: 1,
               }}
             />
-          ))}
+          ))} */}
         </Stack>
         {/* Grid */}
         <Box
