@@ -36,14 +36,26 @@ const postCourses = async (req, res) => {
         course
     });
 };
-const patchCourses = async (req, res) => {
+const patchCourses = async (req, res, next) => {
     const { id } = req.params
     const course = await Courses.findById(id)
-    if (!course) {
-        return next(ErrorHandel("not found course", 404))
+
+    const update = await Courses.findOneAndUpdate(
+        {
+            _id: id,
+            userId: req.user.id,
+        },
+        {
+            ...req.body,
+        },
+        {
+            new: true,
+        }
+    );
+    if (!update) {
+        return next(ErrorHandel("course not found", 404))
     }
-    const update = await Courses.findByIdAndUpdate(id, { ...req.body, course })
-    res.send({ status: SUCCESS })
+    res.send({ status: SUCCESS, data: { update } })
 }
 const DeleteCourses = async (req, res) => {
     const { id } = req.params

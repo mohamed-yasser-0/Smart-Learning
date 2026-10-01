@@ -19,6 +19,7 @@ import {
   CssBaseline,
   useTheme,
   useMediaQuery,
+  Skeleton,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -244,14 +245,16 @@ export default function CourseLibrary() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["users"],
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["courses", tab],
 
     queryFn: async () => {
       const token = localStorage.getItem("token");
 
+      const endpoint = tab === 0 ? "mycourses" : "";
+
       const res = await axios.get(
-        "https://smart-learning-production-61a2.up.railway.app/api/courses/mycourses",
+        `https://smart-learning-production-61a2.up.railway.app/api/courses/${endpoint}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -264,7 +267,32 @@ export default function CourseLibrary() {
   });
   const courses = data?.data?.course;
   console.log(courses);
-  if (isLoading) return <p>جاري التحميل...</p>;
+
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+          },
+          gap: 3,
+        }}
+      >
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <Box key={item}>
+            <Skeleton variant="rounded" height={200} animation="wave" />
+
+            <Skeleton variant="text" width="80%" height={35} animation="wave" />
+
+            <Skeleton variant="text" width="50%" height={25} animation="wave" />
+          </Box>
+        ))}
+      </Box>
+    );
+  }
   if (isError) return <p>حصل خطأ: {error.message}</p>;
 
   const filtered = courses.filter((c) => {

@@ -19,17 +19,21 @@ const coursesSchema = mongoose.Schema({
         type: String,
         required: true
     },
-
-    price: {
-        type: Number,
-        required: true
+    status: {
+        type: String,
+        enum: ["draft", "published"],
+        default: "draft",
     },
+    // price: {
+    //     type: Number,
+    //     required: true
+    // },
     thumbnail: {
         type: String
     },
-    category: {
-        type: String
-    }
+    // category: {
+    //     type: String
+    // }
 },
     {
         timestamps: true
