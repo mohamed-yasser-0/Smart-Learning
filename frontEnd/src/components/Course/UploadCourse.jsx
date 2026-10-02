@@ -38,13 +38,20 @@ const fieldSx = {
 };
 
 export default function UploadCourse() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
-  const [level, setLevel] = useState("");
-  const [instructor, setInstructor] = useState("");
-  const [price, setPrice] = useState(0);
-
+  // const [title, setTitle] = useState("");
+  // const [description, setDescription] = useState("");
+  // const [category, setCategory] = useState("");
+  // const [level, setLevel] = useState("");
+  // const [instructor, setInstructor] = useState("");
+  // const [price, setPrice] = useState(0);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    category: "",
+    level: "",
+    instructor: "",
+    price: 0,
+  });
   // ✅ نفصل الملف الحقيقي (للرفع) عن رابط المعاينة (للعرض بس)
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(null);
@@ -87,19 +94,19 @@ export default function UploadCourse() {
   const courseHandleSubmit = (e) => {
     e.preventDefault();
 
-    if (!title || !description || !category || !level) {
+    if (!formData.title || !formData.description || !formData.category || !formData.level) {
       toast.error("اكمل الحقول الأساسية الأول");
       return;
     }
 
     const formData = new FormData();
 
-    formData.append("title", title);
-    formData.append("description", description);
-    formData.append("instructor", instructor);
-    formData.append("category", category);
-    formData.append("level", level);
-    formData.append("price", price);
+    formData.append("title", formData.title);
+    formData.append("description", formData.description);
+    formData.append("instructor", formData.instructor);
+    formData.append("category", formData.category);
+    formData.append("level", formData.level);
+    formData.append("price", formData.price);
 
     // ✅ بنبعت الملف الحقيقي مش رابط المعاينة
     if (thumbnailFile) {
@@ -112,7 +119,11 @@ export default function UploadCourse() {
   const addModule = () =>
     setModules([
       ...modules,
-      { id: Date.now(), title: `Module ${modules.length + 1}`, lessonsCount: 0 },
+      {
+        id: Date.now(),
+        title: `Module ${modules.length + 1}`,
+        lessonsCount: 0,
+      },
     ]);
 
   const removeModule = (id) => setModules(modules.filter((m) => m.id !== id));
@@ -140,7 +151,12 @@ export default function UploadCourse() {
       {/* Top bar */}
       <Stack
         direction="row"
-        sx={{ alignItems: "center", justifyContent: "space-between", mb: 3, flexWrap: "wrap" }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 3,
+          flexWrap: "wrap",
+        }}
       >
         <Stack direction="row" sx={{ alignItems: "center" }} spacing={1.5}>
           <IconButton
@@ -158,7 +174,9 @@ export default function UploadCourse() {
             <ArrowBackRounded fontSize="small" />
           </IconButton>
           <Box>
-            <Typography sx={{ fontSize: 20, fontWeight: 700, color: "text.primary" }}>
+            <Typography
+              sx={{ fontSize: 20, fontWeight: 700, color: "text.primary" }}
+            >
               رفع كورس جديد
             </Typography>
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -170,7 +188,11 @@ export default function UploadCourse() {
         <Stack
           direction="row"
           spacing={1.5}
-          sx={{ mt: { xs: 2, md: 0 }, justifyContent: "center", alignItems: "center" }}
+          sx={{
+            mt: { xs: 2, md: 0 },
+            justifyContent: "center",
+            alignItems: "center",
+          }}
         >
           <Button
             type="button"
@@ -182,7 +204,10 @@ export default function UploadCourse() {
               textTransform: "none",
               borderRadius: "10px",
               px: 2.5,
-              "&:hover": { borderColor: "primary.main", bgcolor: "action.hover" },
+              "&:hover": {
+                borderColor: "primary.main",
+                bgcolor: "action.hover",
+              },
             }}
           >
             حفظ كمسودة
@@ -200,14 +225,25 @@ export default function UploadCourse() {
                 <RocketLaunchRounded fontSize="small" />
               )
             }
-            sx={{ textTransform: "none", borderRadius: "10px", px: 3, fontWeight: 600 }}
+            sx={{
+              textTransform: "none",
+              borderRadius: "10px",
+              px: 3,
+              fontWeight: 600,
+            }}
           >
             {CourseMutation.isPending ? "جاري النشر..." : "نشر الكورس"}
           </Button>
         </Stack>
       </Stack>
 
-      <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", lg: "row" } }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 3,
+          flexDirection: { xs: "column", lg: "row" },
+        }}
+      >
         {/* ---------------- Main form ---------------- */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Box
@@ -220,7 +256,14 @@ export default function UploadCourse() {
               mb: 3,
             }}
           >
-            <Typography sx={{ fontSize: 15, fontWeight: 700, color: "text.primary", mb: 2.5 }}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 2.5,
+              }}
+            >
               المعلومات الأساسية
             </Typography>
 
@@ -229,8 +272,8 @@ export default function UploadCourse() {
                 fullWidth
                 label="عنوان الكورس"
                 placeholder="مثال: React & TypeScript Mastery"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 sx={fieldSx}
               />
 
@@ -240,15 +283,19 @@ export default function UploadCourse() {
                 minRows={3}
                 label="وصف الكورس"
                 placeholder="اشرح باختصار محتوى الكورس والمهارات اللي هيتعلمها الطالب"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 sx={fieldSx}
               />
 
               <Stack direction="row" spacing={2}>
                 <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>التصنيف</InputLabel>
-                  <Select value={category} label="التصنيف" onChange={(e) => setCategory(e.target.value)}>
+                  <Select
+                    value={formData.category}
+                    label="التصنيف"
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  >
                     {categories.map((c) => (
                       <MenuItem key={c} value={c}>
                         {c}
@@ -259,7 +306,11 @@ export default function UploadCourse() {
 
                 <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>المستوى</InputLabel>
-                  <Select value={level} label="المستوى" onChange={(e) => setLevel(e.target.value)}>
+                  <Select
+                    value={formData.level}
+                    label="المستوى"
+                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                  >
                     {levels.map((l) => (
                       <MenuItem key={l} value={l}>
                         {l}
@@ -274,16 +325,16 @@ export default function UploadCourse() {
                   fullWidth
                   label="اسم المدرب"
                   placeholder="مثال: Ahmed Ali"
-                  value={instructor}
-                  onChange={(e) => setInstructor(e.target.value)}
+                  value={formData.instructor}
+                  onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
                   sx={fieldSx}
                 />
                 <TextField
                   fullWidth
                   type="number"
                   label="السعر"
-                  value={price}
-                  onChange={(e) => setPrice(Number(e.target.value))}
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                   sx={fieldSx}
                 />
               </Stack>
@@ -304,7 +355,14 @@ export default function UploadCourse() {
               mb: 3,
             }}
           >
-            <Typography sx={{ fontSize: 15, fontWeight: 700, color: "text.primary", mb: 1.5 }}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 1.5,
+              }}
+            >
               صورة الغلاف
             </Typography>
 
@@ -323,16 +381,25 @@ export default function UploadCourse() {
                 bgcolor: "background.default",
                 cursor: "pointer",
                 overflow: "hidden",
-                backgroundImage: thumbnailPreview ? `url(${thumbnailPreview})` : "none",
+                backgroundImage: thumbnailPreview
+                  ? `url(${thumbnailPreview})`
+                  : "none",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 "&:hover": { borderColor: "primary.main" },
               }}
             >
-              <input type="file" accept="image/*" hidden onChange={handleThumbnail} />
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handleThumbnail}
+              />
               {!thumbnailPreview && (
                 <>
-                  <CloudUploadRounded sx={{ fontSize: 30, color: "text.disabled" }} />
+                  <CloudUploadRounded
+                    sx={{ fontSize: 30, color: "text.disabled" }}
+                  />
                   <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>
                     اضغط لرفع صورة
                   </Typography>
@@ -351,17 +418,29 @@ export default function UploadCourse() {
               p: 2.5,
             }}
           >
-            <Typography sx={{ fontSize: 15, fontWeight: 700, color: "text.primary", mb: 1.5 }}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: "text.primary",
+                mb: 1.5,
+              }}
+            >
               قبل النشر
             </Typography>
             <Stack spacing={1}>
               {[
-                { label: "عنوان ووصف الكورس", done: !!title && !!description },
-                { label: "التصنيف والمستوى", done: !!category && !!level },
+                { label: "عنوان ووصف الكورس", done: !!formData.title && !!formData.description },
+                { label: "التصنيف والمستوى", done: !!formData.category && !!formData.level },
                 { label: "صورة الغلاف", done: !!thumbnailFile },
                 { label: "موديول واحد على الأقل", done: modules.length > 0 },
               ].map((item) => (
-                <Stack key={item.label} direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Stack
+                  key={item.label}
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
                   <Box
                     sx={{
                       width: 8,
@@ -370,7 +449,12 @@ export default function UploadCourse() {
                       bgcolor: item.done ? "success.main" : "text.disabled",
                     }}
                   />
-                  <Typography sx={{ fontSize: 13, color: item.done ? "text.primary" : "text.secondary" }}>
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      color: item.done ? "text.primary" : "text.secondary",
+                    }}
+                  >
                     {item.label}
                   </Typography>
                 </Stack>
@@ -392,7 +476,12 @@ export default function UploadCourse() {
                   <RocketLaunchRounded fontSize="small" />
                 )
               }
-              sx={{ textTransform: "none", borderRadius: "10px", fontWeight: 600, py: 1.1 }}
+              sx={{
+                textTransform: "none",
+                borderRadius: "10px",
+                fontWeight: 600,
+                py: 1.1,
+              }}
             >
               {CourseMutation.isPending ? "جاري النشر..." : "نشر الكورس"}
             </Button>
