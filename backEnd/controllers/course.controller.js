@@ -10,7 +10,7 @@ const gitMyCourses = async (req, res) => {
     res.send({ status: SUCCESS, data: { course } })
 }
 const gitCourses = async (req, res) => {
-    const course = await Courses.find({}, { "__v": false });
+    const course = await Courses.find({ status: "published" }, { "__v": false });
     res.send({ status: SUCCESS, data: { course } })
 }
 const gitSingle = asyncWrapper(async (req, res, next) => {
@@ -38,7 +38,6 @@ const postCourses = async (req, res) => {
 };
 const patchCourses = async (req, res, next) => {
     const { id } = req.params
-    const course = await Courses.findById(id)
 
     const update = await Courses.findOneAndUpdate(
         {

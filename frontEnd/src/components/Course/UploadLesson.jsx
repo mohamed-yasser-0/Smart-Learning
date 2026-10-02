@@ -67,7 +67,7 @@ export default function UploadLesson() {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        `https://smart-learning-production-61a2.up.railway.app/api/lessons/${courseId}`,
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/lessons/${courseId}`,
         payload,
         {
           headers: {

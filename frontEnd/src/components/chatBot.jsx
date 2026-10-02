@@ -47,7 +47,7 @@ const ChatBot = () => {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        "https://smart-learning-production-61a2.up.railway.app/api/ai/Summarize",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/ai/Summarize",
         {
           summary,
         },

@@ -58,7 +58,7 @@ export default function UploadCourse() {
     mutationFn: async (formData) => {
       const token = localStorage.getItem("token");
       const res = await axios.post(
-        "https://smart-learning-production-61a2.up.railway.app/api/courses",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
         formData,
         {
           headers: {

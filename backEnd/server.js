@@ -28,7 +28,7 @@ app.use('/api/lessons', lessonRouter)
 app.use('/api/quiz', quizRouter)
 app.use('/api/progress', processRouter)
 app.use('/api/user', userRouter)
-app.use('/api/ai',aiRouter)
+app.use('/api/ai', aiRouter)
 
 app.all('/*splat', (req, res, next) => {
     res.status(404).json({ status: ERROR, message: "this resource is not available" })
@@ -36,7 +36,11 @@ app.all('/*splat', (req, res, next) => {
 app.use((error, req, res, next) => {
     res.status(500).json({ status: ERROR, message: error.message })
 })
+const PORT = process.env.PORT || 5000;
 
-app.listen(process.env.PORT, () => {
-    console.log("Alhamd lla")
-})
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Alhamd lla ${PORT}`);
+    });
+}
+module.exports = app;

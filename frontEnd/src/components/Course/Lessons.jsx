@@ -123,7 +123,7 @@ export default function CourseLessons() {
     queryKey: ["lessons", id],
     queryFn: async () => {
       const res = await axios.get(
-        `https://smart-learning-production-61a2.up.railway.app/api/lessons/${id}`,
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/lessons/${id}`,
       );
       return res.data;
     },
@@ -142,7 +142,7 @@ export default function CourseLessons() {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(
-        `https://smart-learning-production-61a2.up.railway.app/api/progress/${id}`,
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -182,7 +182,7 @@ export default function CourseLessons() {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        `https://smart-learning-production-61a2.up.railway.app/api/progress/${id}`,
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress/${id}`,
         progressData,
         {
           headers: {
@@ -215,7 +215,7 @@ export default function CourseLessons() {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
-        "https://smart-learning-production-61a2.up.railway.app/api/ai/Summarize",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/ai/Summarize",
         {
           summary,
         },

@@ -73,7 +73,7 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: async (userData) => {
       const res = await axios.post(
-        "https://smart-learning-production-61a2.up.railway.app/api/user/logIn",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/user/logIn",
         userData,
       );
       return res.data;
@@ -103,7 +103,7 @@ export default function LoginPage() {
   const RegisterMutation = useMutation({
     mutationFn: async (userData) => {
       const res = await axios.post(
-        "https://smart-learning-production-61a2.up.railway.app/api/user/register",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/user/register",
         userData,
       );
       return res.data;

@@ -254,7 +254,7 @@ export default function CourseLibrary() {
       const endpoint = tab === 0 ? "mycourses" : "";
 
       const res = await axios.get(
-        `https://smart-learning-production-61a2.up.railway.app/api/courses/${endpoint}`,
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses/${endpoint}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

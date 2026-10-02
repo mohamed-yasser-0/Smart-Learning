@@ -208,7 +208,7 @@ export default function Home() {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(
-        "https://smart-learning-production-61a2.up.railway.app/api/progress/6a5dae4f0a086d8462075f0c",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress/6a5dae4f0a086d8462075f0c",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -222,7 +222,7 @@ export default function Home() {
   //   queryKey: ["users"],
   //   queryFn: async () => {
   //     const res = await axios.get(
-  //       "https://smart-learning-production-61a2.up.railway.app/api/courses",
+  //       "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
   //     );
   //     return res.data;
   //   },
