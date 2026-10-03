@@ -21,7 +21,7 @@ import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-
+import { FormControlLabel, Switch } from "@mui/material";
 const categories = ["Data Science", "Frontend", "Backend", "Design"];
 const levels = ["Beginner", "Intermediate", "Advanced"];
 
@@ -45,6 +45,7 @@ export default function UploadCourse({ activeCourse }) {
     level: "",
     instructor: "",
     price: 0,
+    status: "draft",
     thumbnailPreview: null,
   });
 
@@ -57,23 +58,20 @@ export default function UploadCourse({ activeCourse }) {
         level: activeCourse.level,
         instructor: activeCourse.instructor,
         price: activeCourse.price,
-        thumbnailFile: null,
+        status: activeCourse.status,
         thumbnailPreview: activeCourse.thumbnail,
       });
     }
   }, [activeCourse]);
+  const [thumbnailFile, setThumbnailFile] = useState(null);
   // ✅ نفصل الملف الحقيقي (للرفع) عن رابط المعاينة (للعرض بس)
-
-  const [modules, setModules] = useState([
-    { id: 1, title: "Module 1", lessonsCount: 3 },
-  ]);
   const navigate = useNavigate();
-
+  const patch = activeCourse ? "patch" : "post"; // لو فيه كورس نشوف لو بنعدل ولا بنضيف
   const CourseMutation = useMutation({
     mutationFn: async (formData) => {
       const token = localStorage.getItem("token");
-      const res = await axios.post(
-        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
+      const res = await axios[patch](
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses/${activeCourse ? activeCourse._id : ""}`,
         formData,
         {
           headers: {
@@ -101,7 +99,7 @@ export default function UploadCourse({ activeCourse }) {
 
   const courseHandleSubmit = (e) => {
     e.preventDefault();
-    if (!form.title || !form.description || !form.category) {
+    if (!form.title || !form.description) {
       toast.error("اكمل الحقول الأساسية الأول");
       return;
     }
@@ -113,20 +111,23 @@ export default function UploadCourse({ activeCourse }) {
     formData.append("category", form.category);
     formData.append("level", form.level);
     formData.append("price", form.price);
-    formData.append("thumbnail", "https://res.cloudinary.com/wnbvvbaz/image/upload/v1790065849/maxresdefault_1_zjqmtq.jpg");
+    formData.append("status", form.status);
+    if (activeCourse) {
+      formData.append("thumbnail", form.thumbnailPreview);
+    }
     // ✅ بنبعت الملف الحقيقي مش رابط المعاينة
-    // if ( form.thumbnailFile) {
-    //   formData.append("thumbnail", thumbnailFile);
-    // }
+    if (thumbnailFile) {
+      formData.append("thumbnail", thumbnailFile);
+    }
 
     CourseMutation.mutate(formData);
   };
   const handleThumbnail = (e) => {
-    // const file = e.target.files?.[0];
-    // if (file) {
-    //   setFormData({ ...form, thumbnailFile: file }); // ده اللي هيتبعت للسيرفر
-    //   setFormData({ ...form, thumbnailPreview: URL.createObjectURL(file) }); // ده للعرض بس
-    // }
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file); // ده اللي هيتبعت للسيرفر
+      setFormData({ ...form, thumbnailPreview: URL.createObjectURL(file) }); // ده للعرض بس
+    }
   };
 
   return (
@@ -170,14 +171,15 @@ export default function UploadCourse({ activeCourse }) {
             <Typography
               sx={{ fontSize: 20, fontWeight: 700, color: "text.primary" }}
             >
-              رفع كورس جديد
+              {activeCourse ? "تعديل الكورس" : "رفع كورس جديد"}
             </Typography>
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              اكتب معلومات الكورس بعدين اضغط نشر
+              اكتب معلومات الكورس بعدين
+              {activeCourse ? " اضغط حفظ" : " اضغط نشر"}
             </Typography>
           </Box>
         </Stack>
-
+        {/* 
         <Stack
           direction="row"
           spacing={1.5}
@@ -227,7 +229,7 @@ export default function UploadCourse({ activeCourse }) {
           >
             {CourseMutation.isPending ? "جاري النشر..." : "نشر الكورس"}
           </Button>
-        </Stack>
+        </Stack> */}
       </Stack>
 
       <Box
@@ -286,24 +288,21 @@ export default function UploadCourse({ activeCourse }) {
               />
 
               <Stack direction="row" spacing={2}>
-                <FormControl fullWidth sx={fieldSx}>
-                  <InputLabel>التصنيف</InputLabel>
-                  <Select
-                    value={form.category}
-                    label="التصنيف"
-                    onChange={(e) =>
-                      setFormData({ ...form, category: e.target.value })
-                    }
-                  >
-                    {categories.map((c) => (
-                      <MenuItem key={c} value={c}>
-                        {c}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl fullWidth sx={fieldSx}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={form.status === "published"}
+                      onChange={(e) =>
+                        setFormData({
+                          ...form,
+                          status: e.target.checked ? "published" : "draft",
+                        })
+                      }
+                    />
+                  }
+                  label={form.publish ? "منشور" : "غير منشور"}
+                />
+                {/* <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>المستوى</InputLabel>
                   <Select
                     value={form.level}
@@ -318,7 +317,7 @@ export default function UploadCourse({ activeCourse }) {
                       </MenuItem>
                     ))}
                   </Select>
-                </FormControl>
+                </FormControl> */}
               </Stack>
 
               <Stack direction="row" spacing={2}>
@@ -332,7 +331,7 @@ export default function UploadCourse({ activeCourse }) {
                   }
                   sx={fieldSx}
                 />
-                <TextField
+                {/* <TextField
                   fullWidth
                   type="number"
                   label="السعر"
@@ -341,7 +340,7 @@ export default function UploadCourse({ activeCourse }) {
                     setFormData({ ...form, price: Number(e.target.value) })
                   }
                   sx={fieldSx}
-                />
+                /> */}
               </Stack>
             </Stack>
           </Box>
@@ -431,7 +430,7 @@ export default function UploadCourse({ activeCourse }) {
                 mb: 1.5,
               }}
             >
-              قبل النشر
+              {activeCourse ? " احفظ التعديلات" : " تأكد من إكمال الخطوات"}
             </Typography>
             <Stack spacing={1}>
               {[
@@ -439,12 +438,13 @@ export default function UploadCourse({ activeCourse }) {
                   label: "عنوان ووصف الكورس",
                   done: !!form.title && !!form.description,
                 },
-                {
-                  label: "التصنيف والمستوى",
-                  done: !!form.category && !!form.level,
-                },
-                { label: "صورة الغلاف", done: !!form.thumbnailFile },
-                { label: "موديول واحد على الأقل", done: modules.length > 0 },
+                // {
+                //   label: "التصنيف والمستوى",
+                //   done: !!form.category && !!form.level,
+                // },
+                { label: "صورة الغلاف", done: !!form.thumbnailPreview },
+                { label: " منشور", done: form.status === "published" },
+                { label: "اسم المدرب", done: !!form.instructor },
               ].map((item) => (
                 <Stack
                   key={item.label}
@@ -494,7 +494,11 @@ export default function UploadCourse({ activeCourse }) {
                 py: 1.1,
               }}
             >
-              {CourseMutation.isPending ? "جاري النشر..." : "نشر الكورس"}
+              {CourseMutation.isPending
+                ? "جاري النشر..."
+                : activeCourse
+                  ? "حفظ التعديلات"
+                  : "نشر الكورس"}
             </Button>
           </Box>
         </Box>

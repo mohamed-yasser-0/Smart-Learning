@@ -56,9 +56,12 @@ const patchCourses = async (req, res, next) => {
     }
     res.send({ status: SUCCESS, data: { update } })
 }
-const DeleteCourses = async (req, res) => {
+const DeleteCourses = async (req, res, next) => {
     const { id } = req.params
-    const deleteCourse = await Courses.findByIdAndDelete(id)
+    const deleteCourse = await Courses.findOneAndDelete({
+        _id: id,
+        userId: req.user.id,
+    })
     if (!deleteCourse) {
         return next(ErrorHandel("not found course", 404))
     }

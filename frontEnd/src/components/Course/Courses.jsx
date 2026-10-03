@@ -28,7 +28,7 @@ import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import PeopleAltRoundedIcon from "@mui/icons-material/PeopleAltRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { CloudUploadRounded } from "@mui/icons-material";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import UploadCourse from "./UploadCourse";
 import { useNavigate } from "react-router-dom";
@@ -73,6 +73,30 @@ export default function CourseLibrary() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.delete(
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      return res.data;
+    },
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["courses"],
+      });
+    },
+  });
+  
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["courses", tab],
 
@@ -94,7 +118,6 @@ export default function CourseLibrary() {
     },
   });
   const courses = data?.data?.course;
-  console.log(courses);
 
   if (isLoading) {
     return (
@@ -122,6 +145,7 @@ export default function CourseLibrary() {
     );
   }
   if (isError) return <p>حصل خطأ: {error.message}</p>;
+  const queryClient = useQueryClient();
 
   const filtered = courses.filter((c) => {
     const matchesFilter = activeFilter;
@@ -131,7 +155,7 @@ export default function CourseLibrary() {
     const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
-  const catStyle = CATEGORY_COLORS[ activeCourse?.category] || LEVEL_STYLE;
+  const catStyle = CATEGORY_COLORS[activeCourse?.category] || LEVEL_STYLE;
   const date = activeCourse?.createdAt
     ? new Date(activeCourse.createdAt).toLocaleDateString("en-GB", {
         day: "numeric",
@@ -148,12 +172,19 @@ export default function CourseLibrary() {
               onClick={() => setShowUploadCourse(false)}
               size="small"
               sx={{
-                bgcolor: "rgba(0,0,0,0.05)",
-                color: "text.secondary",
-                "&:hover": {
-                  bgcolor: "rgba(0,0,0,0.1)",
-                  color: "error.main",
+                position: "absolute",
+                top: {
+                  xs: 140,
+                  sm: 140,
+                  md: 80,
                 },
+                mx: 2,
+                bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "10px",
+                color: "text.secondary",
+                "&:hover": { bgcolor: "action.hover" },
               }}
             >
               <CloseRoundedIcon />
@@ -377,7 +408,7 @@ export default function CourseLibrary() {
                       <EditRoundedIcon fontSize="small" />
                     </IconButton>
                     <IconButton
-                      // onClick={() => setShowDeleteCourse(true)}
+                      onClick={() => deleteMutation.mutate(course._id)}
                       size="small"
                       sx={{
                         bgcolor: "rgba(0,0,0,0.5)",
