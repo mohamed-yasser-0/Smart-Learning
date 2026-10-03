@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -37,24 +37,32 @@ const fieldSx = {
   "& .MuiOutlinedInput-input": { color: "text.primary" },
 };
 
-export default function UploadCourse() {
-  // const [title, setTitle] = useState("");
-  // const [description, setDescription] = useState("");
-  // const [category, setCategory] = useState("");
-  // const [level, setLevel] = useState("");
-  // const [instructor, setInstructor] = useState("");
-  // const [price, setPrice] = useState(0);
-  const [formData, setFormData] = useState({
+export default function UploadCourse({ activeCourse }) {
+  const [form, setFormData] = useState({
     title: "",
     description: "",
     category: "",
     level: "",
     instructor: "",
     price: 0,
+    thumbnailPreview: null,
   });
+
+  useEffect(() => {
+    if (activeCourse) {
+      setFormData({
+        title: activeCourse.title,
+        description: activeCourse.description,
+        category: activeCourse.category,
+        level: activeCourse.level,
+        instructor: activeCourse.instructor,
+        price: activeCourse.price,
+        thumbnailFile: null,
+        thumbnailPreview: activeCourse.thumbnail,
+      });
+    }
+  }, [activeCourse]);
   // ✅ نفصل الملف الحقيقي (للرفع) عن رابط المعاينة (للعرض بس)
-  const [thumbnailFile, setThumbnailFile] = useState(null);
-  const [thumbnailPreview, setThumbnailPreview] = useState(null);
 
   const [modules, setModules] = useState([
     { id: 1, title: "Module 1", lessonsCount: 3 },
@@ -93,47 +101,32 @@ export default function UploadCourse() {
 
   const courseHandleSubmit = (e) => {
     e.preventDefault();
-
-    if (!formData.title || !formData.description || !formData.category || !formData.level) {
+    if (!form.title || !form.description || !form.category) {
       toast.error("اكمل الحقول الأساسية الأول");
       return;
     }
-
     const formData = new FormData();
 
-    formData.append("title", formData.title);
-    formData.append("description", formData.description);
-    formData.append("instructor", formData.instructor);
-    formData.append("category", formData.category);
-    formData.append("level", formData.level);
-    formData.append("price", formData.price);
-
+    formData.append("title", form.title);
+    formData.append("description", form.description);
+    formData.append("instructor", form.instructor);
+    formData.append("category", form.category);
+    formData.append("level", form.level);
+    formData.append("price", form.price);
+    formData.append("thumbnail", "https://res.cloudinary.com/wnbvvbaz/image/upload/v1790065849/maxresdefault_1_zjqmtq.jpg");
     // ✅ بنبعت الملف الحقيقي مش رابط المعاينة
-    if (thumbnailFile) {
-      formData.append("thumbnail", thumbnailFile);
-    }
+    // if ( form.thumbnailFile) {
+    //   formData.append("thumbnail", thumbnailFile);
+    // }
 
     CourseMutation.mutate(formData);
   };
-
-  const addModule = () =>
-    setModules([
-      ...modules,
-      {
-        id: Date.now(),
-        title: `Module ${modules.length + 1}`,
-        lessonsCount: 0,
-      },
-    ]);
-
-  const removeModule = (id) => setModules(modules.filter((m) => m.id !== id));
-
   const handleThumbnail = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setThumbnailFile(file); // ده اللي هيتبعت للسيرفر
-      setThumbnailPreview(URL.createObjectURL(file)); // ده للعرض بس
-    }
+    // const file = e.target.files?.[0];
+    // if (file) {
+    //   setFormData({ ...form, thumbnailFile: file }); // ده اللي هيتبعت للسيرفر
+    //   setFormData({ ...form, thumbnailPreview: URL.createObjectURL(file) }); // ده للعرض بس
+    // }
   };
 
   return (
@@ -272,8 +265,10 @@ export default function UploadCourse() {
                 fullWidth
                 label="عنوان الكورس"
                 placeholder="مثال: React & TypeScript Mastery"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                value={form.title}
+                onChange={(e) =>
+                  setFormData({ ...form, title: e.target.value })
+                }
                 sx={fieldSx}
               />
 
@@ -283,8 +278,10 @@ export default function UploadCourse() {
                 minRows={3}
                 label="وصف الكورس"
                 placeholder="اشرح باختصار محتوى الكورس والمهارات اللي هيتعلمها الطالب"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                value={form.description}
+                onChange={(e) =>
+                  setFormData({ ...form, description: e.target.value })
+                }
                 sx={fieldSx}
               />
 
@@ -292,9 +289,11 @@ export default function UploadCourse() {
                 <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>التصنيف</InputLabel>
                   <Select
-                    value={formData.category}
+                    value={form.category}
                     label="التصنيف"
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...form, category: e.target.value })
+                    }
                   >
                     {categories.map((c) => (
                       <MenuItem key={c} value={c}>
@@ -307,9 +306,11 @@ export default function UploadCourse() {
                 <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>المستوى</InputLabel>
                   <Select
-                    value={formData.level}
+                    value={form.level}
                     label="المستوى"
-                    onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...form, level: e.target.value })
+                    }
                   >
                     {levels.map((l) => (
                       <MenuItem key={l} value={l}>
@@ -325,16 +326,20 @@ export default function UploadCourse() {
                   fullWidth
                   label="اسم المدرب"
                   placeholder="مثال: Ahmed Ali"
-                  value={formData.instructor}
-                  onChange={(e) => setFormData({ ...formData, instructor: e.target.value })}
+                  value={form.instructor}
+                  onChange={(e) =>
+                    setFormData({ ...form, instructor: e.target.value })
+                  }
                   sx={fieldSx}
                 />
                 <TextField
                   fullWidth
                   type="number"
                   label="السعر"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                  value={form.price}
+                  onChange={(e) =>
+                    setFormData({ ...form, price: Number(e.target.value) })
+                  }
                   sx={fieldSx}
                 />
               </Stack>
@@ -381,8 +386,8 @@ export default function UploadCourse() {
                 bgcolor: "background.default",
                 cursor: "pointer",
                 overflow: "hidden",
-                backgroundImage: thumbnailPreview
-                  ? `url(${thumbnailPreview})`
+                backgroundImage: form.thumbnailPreview
+                  ? `url(${form.thumbnailPreview})`
                   : "none",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
@@ -395,7 +400,7 @@ export default function UploadCourse() {
                 hidden
                 onChange={handleThumbnail}
               />
-              {!thumbnailPreview && (
+              {!form.thumbnailPreview && (
                 <>
                   <CloudUploadRounded
                     sx={{ fontSize: 30, color: "text.disabled" }}
@@ -430,9 +435,15 @@ export default function UploadCourse() {
             </Typography>
             <Stack spacing={1}>
               {[
-                { label: "عنوان ووصف الكورس", done: !!formData.title && !!formData.description },
-                { label: "التصنيف والمستوى", done: !!formData.category && !!formData.level },
-                { label: "صورة الغلاف", done: !!thumbnailFile },
+                {
+                  label: "عنوان ووصف الكورس",
+                  done: !!form.title && !!form.description,
+                },
+                {
+                  label: "التصنيف والمستوى",
+                  done: !!form.category && !!form.level,
+                },
+                { label: "صورة الغلاف", done: !!form.thumbnailFile },
                 { label: "موديول واحد على الأقل", done: modules.length > 0 },
               ].map((item) => (
                 <Stack

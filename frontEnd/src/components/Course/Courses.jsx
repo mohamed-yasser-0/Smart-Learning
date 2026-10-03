@@ -68,6 +68,7 @@ export default function CourseLibrary() {
   const [showUploadCourse, setShowUploadCourse] = useState(false);
   const [tab, setTab] = useState(0);
   const [activeFilter, setActiveFilter] = useState("All");
+  const [activeCourse, setActiveCourse] = useState(null);
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
   const theme = useTheme();
@@ -130,9 +131,9 @@ export default function CourseLibrary() {
     const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
-  const catStyle = CATEGORY_COLORS[course.category] || LEVEL_STYLE;
-  const date = course?.createdAt
-    ? new Date(course.createdAt).toLocaleDateString("en-GB", {
+  const catStyle = CATEGORY_COLORS[ activeCourse?.category] || LEVEL_STYLE;
+  const date = activeCourse?.createdAt
+    ? new Date(activeCourse.createdAt).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -158,7 +159,7 @@ export default function CourseLibrary() {
               <CloseRoundedIcon />
             </IconButton>
           </Box>
-          <UploadCourse />
+          <UploadCourse activeCourse={activeCourse} />
         </>
       ) : (
         <Container maxWidth="lg">
@@ -359,7 +360,10 @@ export default function CourseLibrary() {
                     sx={{ position: "absolute", top: 12, right: 12 }}
                   >
                     <IconButton
-                      onClick={() => suc(true)}
+                      onClick={() => {
+                        setShowUploadCourse(true);
+                        setActiveCourse(course);
+                      }}
                       size="small"
                       sx={{
                         bgcolor: "rgba(0,0,0,0.5)",
@@ -373,6 +377,7 @@ export default function CourseLibrary() {
                       <EditRoundedIcon fontSize="small" />
                     </IconButton>
                     <IconButton
+                      // onClick={() => setShowDeleteCourse(true)}
                       size="small"
                       sx={{
                         bgcolor: "rgba(0,0,0,0.5)",
