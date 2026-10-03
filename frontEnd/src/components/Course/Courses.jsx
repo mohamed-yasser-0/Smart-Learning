@@ -20,6 +20,11 @@ import {
   useTheme,
   useMediaQuery,
   Skeleton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -35,6 +40,8 @@ import { useNavigate } from "react-router-dom";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
+import ConfirmDialog from "../DeleteCourseDialog";
+import toast from "react-hot-toast";
 
 // ---------------------------------------------------------------------------
 // Theme — dark navy background matching the reference design
@@ -70,6 +77,9 @@ export default function CourseLibrary() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [activeCourse, setActiveCourse] = useState(null);
   const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogType, setDialogType] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState(null);
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -91,12 +101,13 @@ export default function CourseLibrary() {
     },
 
     onSuccess: () => {
+      toast.success("تم حذف الكورس بنجاح");
       queryClient.invalidateQueries({
         queryKey: ["courses"],
       });
     },
   });
-  
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["courses", tab],
 
@@ -408,7 +419,11 @@ export default function CourseLibrary() {
                       <EditRoundedIcon fontSize="small" />
                     </IconButton>
                     <IconButton
-                      onClick={() => deleteMutation.mutate(course._id)}
+                      onClick={() => {
+                        setSelectedCourse(course);
+                        setDialogType("delete");
+                        setDialogOpen(true);
+                      }}
                       size="small"
                       sx={{
                         bgcolor: "rgba(0,0,0,0.5)",
@@ -416,7 +431,9 @@ export default function CourseLibrary() {
                         width: 34,
                         height: 34,
                         backdropFilter: "blur(4px)",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
+                        "&:hover": {
+                          bgcolor: "rgba(0,0,0,0.7)",
+                        },
                       }}
                     >
                       <DeleteRoundedIcon fontSize="small" />
@@ -528,6 +545,19 @@ export default function CourseLibrary() {
           </Box>
         </Container>
       )}
+      <ConfirmDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        title="حذف الكورس"
+        message={`هل أنت متأكد أنك تريد حذف الكورس "${selectedCourse?.title}"؟`}
+        confirmText="حذف"
+        confirmColor="error"
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          deleteMutation.mutate(selectedCourse._id);
+          setDialogOpen(false);
+        }}
+      />
     </Box>
   );
 }
