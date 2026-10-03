@@ -18,7 +18,8 @@ function Root() {
     localStorage.setItem("theme", mode);
   }, [mode]);
   return (
-    <BrowserRouter basename="/Smart-Learning">
+    // <BrowserRouter basename="/Smart-Learning">
+      <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />
