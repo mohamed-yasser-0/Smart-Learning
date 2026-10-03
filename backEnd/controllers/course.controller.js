@@ -26,7 +26,7 @@ const postCourses = async (req, res) => {
     const course = new Courses({
         userId: req.user.id,
         ...req.body,
-        thumbnail: req.file?.path
+        thumbnail: req.file?.path || req.body.thumbnail,
     });
 
     await course.save();
