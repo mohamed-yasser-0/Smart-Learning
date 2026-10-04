@@ -45,6 +45,8 @@ import {
 } from "@mui/material";
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import { lime } from "@mui/material/colors";
+import { jwtDecode } from "jwt-decode";
+
 // ---- بيانات الكورس نفسه (لسه مصدرها مش من الـ lessons endpoint) ----
 const course = {
   title: "React & TypeScript Mastery",
@@ -78,6 +80,8 @@ const INITIAL_MESSAGES = [
 ];
 let limit = 0;
 export default function CourseLessons() {
+  const token = localStorage.getItem("token");
+  const decodedToken = token ? jwtDecode(token) : null;
   const theme = useTheme();
   const [tab, setTab] = useState(0);
   const [lessonId, setLessonId] = useState(null);
@@ -88,9 +92,6 @@ export default function CourseLessons() {
   const [quizResult, setQuizResult] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const [chatMessages, setChatMessages] = useState([
-    { role: "assistant", text: "أهلاً! أسألني عن محتوى الدرس أو اطلب ملخص." },
-  ]);
   const bottomRef = useRef(null);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);

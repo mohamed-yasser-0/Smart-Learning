@@ -391,52 +391,53 @@ export default function CourseLibrary() {
                       <PlayArrowRoundedIcon />
                     </IconButton>
                   )}
-
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ position: "absolute", top: 12, right: 12 }}
-                  >
-                    <IconButton
-                      aria-label="Edit course"
-                      onClick={() => {
-                        setShowUploadCourse(true);
-                        setActiveCourse(course);
-                      }}
-                      size="small"
-                      sx={{
-                        bgcolor: "rgba(10,14,39,0.6)",
-                        color: "#fff",
-                        width: 34,
-                        height: 34,
-                        backdropFilter: "blur(6px)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        "&:hover": { bgcolor: "rgba(10,14,39,0.85)" },
-                      }}
+                  {course.userId === user?.id && (
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{ position: "absolute", top: 12, right: 12 }}
                     >
-                      <EditRoundedIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Delete course"
-                      onClick={() => {
-                        setSelectedCourse(course);
-                        setDialogType("delete");
-                        setDialogOpen(true);
-                      }}
-                      size="small"
-                      sx={{
-                        bgcolor: "rgba(10,14,39,0.6)",
-                        color: "#ff6b6b",
-                        width: 34,
-                        height: 34,
-                        backdropFilter: "blur(6px)",
-                        border: "1px solid rgba(255,255,255,0.12)",
-                        "&:hover": { bgcolor: "rgba(10,14,39,0.85)" },
-                      }}
-                    >
-                      <DeleteRoundedIcon fontSize="small" />
-                    </IconButton>
-                  </Stack>
+                      <IconButton
+                        aria-label="Edit course"
+                        onClick={() => {
+                          setShowUploadCourse(true);
+                          setActiveCourse(course);
+                        }}
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(10,14,39,0.6)",
+                          color: "#fff",
+                          width: 34,
+                          height: 34,
+                          backdropFilter: "blur(6px)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          "&:hover": { bgcolor: "rgba(10,14,39,0.85)" },
+                        }}
+                      >
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton
+                        aria-label="Delete course"
+                        onClick={() => {
+                          setSelectedCourse(course);
+                          setDialogType("delete");
+                          setDialogOpen(true);
+                        }}
+                        size="small"
+                        sx={{
+                          bgcolor: "rgba(10,14,39,0.6)",
+                          color: "#ff6b6b",
+                          width: 34,
+                          height: 34,
+                          backdropFilter: "blur(6px)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          "&:hover": { bgcolor: "rgba(10,14,39,0.85)" },
+                        }}
+                      >
+                        <DeleteRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Stack>
+                  )}
                 </Box>
 
                 <CardContent

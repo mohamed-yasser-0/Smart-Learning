@@ -199,10 +199,35 @@ const StatCard = ({ icon, value, label, iconBg }) => (
     </CardContent>
   </Card>
 );
-
 export default function Home() {
   const token = localStorage.getItem("token");
   const user = token ? jwtDecode(token) : null;
+  const {
+    data: CourseData,
+    isLoading: CourseIsLoading,
+    isError: CourseIsError,
+    error: CourseError,
+  } = useQuery({
+    queryKey: ["courses"],
+
+    queryFn: async () => {
+      const res = await axios.get(
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      return res.data;
+    },
+  });
+
+  const courses = CourseData?.data?.course;
+
+  console.log("courses:", courses);
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["progress"],
     queryFn: async () => {
@@ -217,6 +242,7 @@ export default function Home() {
       return res.data;
     },
   });
+
   console.log(data?.data?.progres);
   const day = data?.data?.progres.map((e) => ({
     day: new Date(e?.createdAt).toLocaleDateString("en-US", {
@@ -225,7 +251,6 @@ export default function Home() {
     hours: e?.duration,
   }));
 
-  console.log(day);
   const progress = data?.data?.progres;
   const sub = progress?.reduce((acc, e) => acc + e.duration, 0);
   // if (isError) return <p>حصل خطأ: {error.message}</p>;
@@ -239,25 +264,11 @@ export default function Home() {
   const lessons =
     data?.data?.progres?.filter((e) => !e?.quizScore?.length) || [];
 
-  const continueLearning = progress
-    ?.reduce((acc, item) => {
-      const existingCourse = acc.find(
-        (course) => course.courseId === item.courseId,
-      );
+  const courseIds = [...new Set(progress?.map((item) => item.courseId))];
 
-      if (existingCourse) {
-        existingCourse.count += 1;
-      } else {
-        acc.push({
-          ...item,
-          count: 1,
-        });
-      }
-
-      return acc;
-    }, [])
-    ?.sort((a, b) => b.count - a.count)
-    ?.slice(0, 3);
+  const continueLearning = courses
+    ?.filter((course) => courseIds.includes(course._id))
+    .slice(0, 3);
   console.log("connnnsssssss", continueLearning);
   return (
     <Box
@@ -540,6 +551,9 @@ export default function Home() {
         {continueLearning?.map((item) => (
           <Grid size={{ xs: 12, md: 4 }} key={item.title}>
             <Card
+            onClick={() => {
+              window.location.href = `/courses/${item._id}`;
+            }}
               sx={{
                 bgcolor: "backgorund.paper",
                 borderRadius: "16px",
@@ -554,7 +568,7 @@ export default function Home() {
               }}
             >
               <CardContent sx={{ p: 2.5 }}>
-                <Chip
+                {/* <Chip
                   label={item.tag}
                   size="small"
                   sx={{
@@ -566,7 +580,7 @@ export default function Home() {
                     mb: 1.5,
                     borderRadius: "6px",
                   }}
-                />
+                /> */}
                 <Typography
                   sx={{ fontSize: "1.05rem", fontWeight: 600, mb: 0.6 }}
                 >

@@ -4,6 +4,7 @@ const ErrorHandel = require("../utils/appError");
 const { SUCCESS, FAIL } = require("../utils/httpStatusText");
 const cloudinary = require("../config/cloudinary");
 const { fetchTranscript } = require("youtube-transcript");
+const Courses = require("../models/courses.model.js");
 
 const gitLessons = async (req, res) => {
     const { courseId } = req.params
@@ -20,9 +21,17 @@ const gitSingle = asyncWrapper(async (req, res, next) => {
 })
 // نسيت الاويت يا شاطر
 
-const postLesson = asyncWrapper(async (req, res) => {
+const postLesson = asyncWrapper(async (req, res, next) => {
     const { courseId } = req.params;
+    const course = await Courses.findById(courseId);
 
+    if (!course) {
+        return next(ErrorHandel("course not found", 404));
+    }
+
+    if (course.userId.toString() !== req.user.id.toString()) {
+        return next(ErrorHandel("you are not the owner of this course", 403));
+    }
     const lesson = new Lesson(req.body);
     lesson.course = courseId;
 
