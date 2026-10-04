@@ -21,6 +21,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import { useNavigate, useLocation } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
 import MenuIcon from "@mui/icons-material/Menu";
+import { jwtDecode } from "jwt-decode";
 const menuItems = [
   {
     id: "dashboard",
@@ -56,6 +57,8 @@ const menuItems = [
 ];
 
 export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
+  const token = localStorage.getItem("token");
+  const user = token ? jwtDecode(token) : null;
   const [selected, setSelected] = useState("dashboard");
   const navigate = useNavigate();
   const location = useLocation();
@@ -357,7 +360,7 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
                 fontWeight: 700,
               }}
             >
-              AJ
+              {user?.firstName?.[0]?.toUpperCase() || "U"}
             </Avatar>
             <Box sx={{ flexGrow: 1 }}>
               <Typography
@@ -368,10 +371,10 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
                   lineHeight: 1.3,
                 }}
               >
-                Alex Johnson
+                {user?.username || "User"}
               </Typography>
               <Typography sx={{ color: "text.secondary", fontSize: 11 }}>
-                Level 7 Learner
+                {user?.email || "user@example.com"}
               </Typography>
             </Box>
             <IconButton

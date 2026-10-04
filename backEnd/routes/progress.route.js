@@ -4,6 +4,7 @@ const verifyToken = require("../middleware/verifyToken.js");
 
 const processRouter = express.Router();
 processRouter.route("/:courseId")
-    .get(verifyToken,gitProgress)
     .post(verifyToken, postProgress)
+processRouter.route("/")
+    .get(verifyToken,gitProgress)
 module.exports = processRouter

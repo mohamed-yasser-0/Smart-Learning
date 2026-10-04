@@ -497,17 +497,17 @@ export default function CourseLibrary() {
                     >
                       <Avatar
                         src={course.instructor?.image}
-                        alt={course.instructor?.name}
+                        alt={user?.username}
                         sx={{ width: 28, height: 28, fontSize: 13 }}
                       >
-                        {course.instructor?.name?.charAt(0)}
+                        {user?.username?.charAt(0)}
                       </Avatar>
                       <Typography
                         variant="caption"
                         noWrap
                         sx={{ color: "rgba(255,255,255,0.7)" }}
                       >
-                        {course.instructor?.name || "Instructor"}
+                        {user?.username || "Instructor"}
                       </Typography>
                     </Stack>
 

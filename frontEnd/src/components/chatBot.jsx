@@ -19,6 +19,8 @@ import SmartToyRoundedIcon from "@mui/icons-material/SmartToyRounded";
 import { useMutation } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
+
 
 const INITIAL_MESSAGES = [
   {
@@ -29,6 +31,8 @@ const INITIAL_MESSAGES = [
 ];
 
 const ChatBot = () => {
+  const token = localStorage.getItem("token");
+  const user = token ? jwtDecode(token) : null;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -114,7 +118,7 @@ Explain concepts simply and clearly.
 If the student asks for an explanation, give examples.
 Do not make up information.
 
-Student message:${trimmed}`);
+Student message: and my name is ${user?.username || "Student"}: ${trimmed}`);
   };
 
   // --------------------------------------------------

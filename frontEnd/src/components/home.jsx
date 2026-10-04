@@ -27,7 +27,7 @@ import {
 } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-
+import { jwtDecode } from "jwt-decode";
 // Exact data from the image
 const weeklyData = [
   { day: "Mon", hours: 48 },
@@ -201,14 +201,13 @@ const StatCard = ({ icon, value, label, iconBg }) => (
 );
 
 export default function Home() {
-  
+  const token = localStorage.getItem("token");
+  const user = token ? jwtDecode(token) : null;
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["progress"],
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-
       const res = await axios.get(
-        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress/6a5dae4f0a086d8462075f0c",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -218,21 +217,6 @@ export default function Home() {
       return res.data;
     },
   });
-  // const { data:Coursedata, isLoading:isLoadingCourse, isError:isErrorCourse, error:errorCourse, refetch:refetchCourse } = useQuery({
-  //   queryKey: ["users"],
-  //   queryFn: async () => {
-  //     const res = await axios.get(
-  //       "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
-  //     );
-  //     return res.data;
-  //   },
-  // });
-  // const courses = Coursedata?.data?.course;
-  // console.log(courses);
-  // if (isLoadingCourse) return <p>جاري التحميل...</p>;
-  // if (isErrorCourse) return <p>حصل خطأ: {error.message}</p>;
-
-
   console.log(data?.data?.progres);
   const day = data?.data?.progres.map((e) => ({
     day: new Date(e?.createdAt).toLocaleDateString("en-US", {
@@ -286,7 +270,7 @@ export default function Home() {
               gap: 1,
             }}
           >
-            Good morning, {} 👋
+            Good morning, {user?.username || "there"} 👋
           </Typography>
           <Typography
             sx={{ fontSize: "0.95rem", color: "text.secondary", mt: 0.6 }}
@@ -319,7 +303,7 @@ export default function Home() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             icon={<AccessTime sx={{ fontSize: 22 }} />}
-            value={`${Math.round(sub/60) ?? 0} hrs`}
+            value={`${Math.round(sub / 60) ?? 0} hrs`}
             label="Hours Learned"
             iconBg="#3F51B5"
           />
