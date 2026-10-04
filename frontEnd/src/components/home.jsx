@@ -238,6 +238,27 @@ export default function Home() {
 
   const lessons =
     data?.data?.progres?.filter((e) => !e?.quizScore?.length) || [];
+
+  const continueLearning = progress
+    ?.reduce((acc, item) => {
+      const existingCourse = acc.find(
+        (course) => course.courseId === item.courseId,
+      );
+
+      if (existingCourse) {
+        existingCourse.count += 1;
+      } else {
+        acc.push({
+          ...item,
+          count: 1,
+        });
+      }
+
+      return acc;
+    }, [])
+    ?.sort((a, b) => b.count - a.count)
+    ?.slice(0, 3);
+  console.log("connnnsssssss", continueLearning);
   return (
     <Box
       sx={{
@@ -516,7 +537,7 @@ export default function Home() {
         </Typography>
       </Box>
       <Grid container spacing={2}>
-        {continueLearning.map((item) => (
+        {continueLearning?.map((item) => (
           <Grid size={{ xs: 12, md: 4 }} key={item.title}>
             <Card
               sx={{

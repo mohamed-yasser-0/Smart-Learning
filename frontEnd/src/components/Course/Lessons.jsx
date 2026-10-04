@@ -142,7 +142,7 @@ export default function CourseLessons() {
       const token = localStorage.getItem("token");
 
       const res = await axios.get(
-        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress/${id}`,
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/progress`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
