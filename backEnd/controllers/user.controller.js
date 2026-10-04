@@ -22,8 +22,15 @@ const logInUser = asyncWrapper(async (req, res, next) => {
         return next(ErrorHandel("Invalid email or password", 401));
     }
 
-    const token = JwtToken({ id: findUser._id, email: findUser.email })
-    res.send({ token })
+    const token = JwtToken({
+        id: findUser._id,
+        firstName: findUser.firstName,
+        lastName: findUser.lastName,
+        username: findUser.username,
+        email: findUser.email,
+        role: findUser.role,
+        avatar: findUser.avatar,
+    }); res.send({ token })
 });
 
 const registerUser = asyncWrapper(async (req, res, next) => {

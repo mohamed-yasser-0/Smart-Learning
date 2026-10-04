@@ -19,7 +19,7 @@ function Root() {
   }, [mode]);
   return (
     // <BrowserRouter basename="/Smart-Learning">
-      <BrowserRouter>
+      <BrowserRouter> 
       <QueryClientProvider client={queryClient}>
         <ThemeProvider theme={theme}>
           <CssBaseline />

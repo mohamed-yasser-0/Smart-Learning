@@ -23,7 +23,7 @@ function App({ mode, setMode }) {
   return (
     <>
       <Routes>
-        <Route path="/" element={<LoginPage />} />
+        <Route path="/" element={<LoginPage/>} />
         <Route
           element={
             <ProtectedRoute>

@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Avatar,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import TuneIcon from "@mui/icons-material/Tune";
@@ -42,7 +43,7 @@ import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import ConfirmDialog from "../DeleteCourseDialog";
 import toast from "react-hot-toast";
-
+import { jwtDecode } from "jwt-decode";
 // ---------------------------------------------------------------------------
 // Theme — dark navy background matching the reference design
 // ---------------------------------------------------------------------------
@@ -83,11 +84,11 @@ export default function CourseLibrary() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
+  const token = localStorage.getItem("token");
+  const user = jwtDecode(token);
+  console.log("user", user);
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const token = localStorage.getItem("token");
-
       const res = await axios.delete(
         `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses/${id}`,
         {
@@ -112,8 +113,6 @@ export default function CourseLibrary() {
     queryKey: ["courses", tab],
 
     queryFn: async () => {
-      const token = localStorage.getItem("token");
-
       const endpoint = tab === 0 ? "mycourses" : "";
 
       const res = await axios.get(
@@ -336,14 +335,21 @@ export default function CourseLibrary() {
           >
             {filtered.map((course) => (
               <Card
+                key={course._id}
                 elevation={0}
                 sx={{
                   bgcolor: "background.paper",
                   border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 1,
                   display: "flex",
                   flexDirection: "column",
                   height: "100%",
                   overflow: "hidden",
+                  transition: "border-color .2s, transform .2s",
+                  "&:hover": {
+                    borderColor: "rgba(255,255,255,0.22)",
+                    transform: "translateY(-3px)",
+                  },
                 }}
               >
                 <Box sx={{ position: "relative" }}>
@@ -351,74 +357,67 @@ export default function CourseLibrary() {
                     component="img"
                     image={course.thumbnail}
                     alt={course.title}
-                    sx={{ height: 170, objectFit: "cover" }}
+                    sx={{ height: 180, objectFit: "cover" }}
                   />
-                  {/* gradient overlay for badge legibility */}
+                  {/* gradient overlay for button legibility */}
                   <Box
                     sx={{
                       position: "absolute",
                       inset: 0,
+                      pointerEvents: "none",
                       background:
-                        "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 40%)",
+                        "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.5) 100%)",
                     }}
                   />
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ position: "absolute", top: 12, left: 12 }}
-                  >
-                    <Chip
-                      label={course.category}
-                      size="small"
-                      sx={{
-                        bgcolor: catStyle.bg,
-                        color: "text.secondary",
-                        fontWeight: 600,
-                        fontSize: 12,
-                        backdropFilter: "blur(4px)",
-                      }}
-                    />
-                  </Stack>
+
                   {course.hasPlay && (
                     <IconButton
-                      size="small"
+                      aria-label="Play preview"
                       sx={{
                         position: "absolute",
                         bottom: 12,
                         right: 12,
-                        bgcolor: "red",
+                        width: 42,
+                        height: 42,
+                        bgcolor: course.playColor || "primary.main",
                         color: "#0A0E27",
-                        width: 34,
-                        height: 34,
-                        "&:hover": { bgcolor: course.playColor, opacity: 0.9 },
+                        boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
+                        "&:hover": {
+                          bgcolor: course.playColor || "primary.main",
+                          opacity: 0.9,
+                        },
                       }}
                     >
-                      <PlayArrowRoundedIcon fontSize="small" />
+                      <PlayArrowRoundedIcon />
                     </IconButton>
                   )}
+
                   <Stack
                     direction="row"
                     spacing={1}
                     sx={{ position: "absolute", top: 12, right: 12 }}
                   >
                     <IconButton
+                      aria-label="Edit course"
                       onClick={() => {
                         setShowUploadCourse(true);
                         setActiveCourse(course);
                       }}
                       size="small"
                       sx={{
-                        bgcolor: "rgba(0,0,0,0.5)",
+                        bgcolor: "rgba(10,14,39,0.6)",
                         color: "#fff",
                         width: 34,
                         height: 34,
-                        backdropFilter: "blur(4px)",
-                        "&:hover": { bgcolor: "rgba(0,0,0,0.7)" },
+                        backdropFilter: "blur(6px)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        "&:hover": { bgcolor: "rgba(10,14,39,0.85)" },
                       }}
                     >
                       <EditRoundedIcon fontSize="small" />
                     </IconButton>
                     <IconButton
+                      aria-label="Delete course"
                       onClick={() => {
                         setSelectedCourse(course);
                         setDialogType("delete");
@@ -426,14 +425,13 @@ export default function CourseLibrary() {
                       }}
                       size="small"
                       sx={{
-                        bgcolor: "rgba(0,0,0,0.5)",
-                        color: "#f44336",
+                        bgcolor: "rgba(10,14,39,0.6)",
+                        color: "#ff6b6b",
                         width: 34,
                         height: 34,
-                        backdropFilter: "blur(4px)",
-                        "&:hover": {
-                          bgcolor: "rgba(0,0,0,0.7)",
-                        },
+                        backdropFilter: "blur(6px)",
+                        border: "1px solid rgba(255,255,255,0.12)",
+                        "&:hover": { bgcolor: "rgba(10,14,39,0.85)" },
                       }}
                     >
                       <DeleteRoundedIcon fontSize="small" />
@@ -446,73 +444,110 @@ export default function CourseLibrary() {
                     flexGrow: 1,
                     display: "flex",
                     flexDirection: "column",
-                    pb: 2,
+                    gap: 1.5,
+                    p: 2.5,
+                    "&:last-child": { pb: 2.5 },
                   }}
                 >
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    color="#fff"
-                    gutterBottom
-                  >
-                    {course.title}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 1.5, flexGrow: 1, color: "text.secondary" }}
-                  >
-                    {course.description}
-                  </Typography>
-
+                  <Box>
+                    <Typography
+                      variant="h6"
+                      fontWeight={700}
+                      color="#fff"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        lineHeight: 1.3,
+                        mb: 0.75,
+                      }}
+                    >
+                      {course.title}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {course.description}
+                    </Typography>
+                  </Box>
+                  {/* صاحب الكورس + التاريخ */}
                   <Stack
                     direction="row"
-                    spacing={2}
-                    alignItems="center"
-                    sx={{ mb: 1.5, color: "text.secondary" }}
+                    sx={{
+                      mt: "auto",
+                      pt: 1.5,
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
                   >
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <AccessTimeRoundedIcon sx={{ fontSize: 15 }} />
-                      <Typography variant="caption">{date}</Typography>
-                    </Stack>
-                    <Stack direction="row" spacing={0.5} alignItems="center">
-                      <StarRoundedIcon
-                        sx={{ fontSize: 16, color: "#FBBF24" }}
-                      />
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      minWidth={0}
+                      sx={{ alignItems: "center" }}
+                    >
+                      <Avatar
+                        src={course.instructor?.image}
+                        alt={course.instructor?.name}
+                        sx={{ width: 28, height: 28, fontSize: 13 }}
+                      >
+                        {course.instructor?.name?.charAt(0)}
+                      </Avatar>
                       <Typography
                         variant="caption"
-                        sx={{ color: "text.secondary" }}
-                        fontWeight={600}
+                        noWrap
+                        sx={{ color: "rgba(255,255,255,0.7)" }}
                       >
-                        {course.price}
+                        {course.instructor?.name || "Instructor"}
                       </Typography>
                     </Stack>
+
+                    {course.createdAt && (
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        sx={{
+                          color: "text.secondary",
+                          flexShrink: 0,
+                          alignItems: "center",
+                          ml: "auto",
+                        }}
+                      >
+                        <AccessTimeRoundedIcon sx={{ fontSize: 14 }} />
+                        <Typography variant="caption">
+                          {new Date(course.createdAt).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            },
+                          )}
+                        </Typography>
+                      </Stack>
+                    )}
                   </Stack>
 
                   {typeof course.progress === "number" ? (
                     <Box>
-                      <LinearProgress
-                        variant="determinate"
-                        value={course.progress}
-                        sx={{
-                          height: 5,
-                          borderRadius: 5,
-                          bgcolor: "rgba(255,255,255,0.08)",
-                          mb: 1,
-                          "& .MuiLinearProgress-bar": {
-                            bgcolor: course.progressColor,
-                            borderRadius: 5,
-                          },
-                        }}
-                      />
                       <Stack
                         direction="row"
-                        sx={{ justifyContent: "space-between" }}
+                        sx={{ mb: 0.75, justifyContent: "space-between" }}
                       >
                         <Typography
                           variant="caption"
                           sx={{ color: "rgba(255,255,255,0.6)" }}
                         >
-                          {course.instructor}
+                          Progress
                         </Typography>
                         <Typography
                           variant="caption"
@@ -522,21 +557,34 @@ export default function CourseLibrary() {
                           {course.progress}%
                         </Typography>
                       </Stack>
+                      <LinearProgress
+                        variant="determinate"
+                        value={course.progress}
+                        sx={{
+                          height: 6,
+                          borderRadius: 3,
+                          bgcolor: "rgba(255,255,255,0.08)",
+                          "& .MuiLinearProgress-bar": {
+                            bgcolor: course.progressColor,
+                            borderRadius: 3,
+                          },
+                        }}
+                      />
                     </Box>
                   ) : (
                     <Button
                       fullWidth
+                      variant="contained"
+                      disableElevation
                       onClick={() => navigate(`/courses/${course._id}`)}
                       sx={{
-                        bgcolor: "primary.main",
-                        color: "primary.contrastText",
                         fontWeight: 700,
                         textTransform: "none",
-                        py: 1,
-                        "&:hover": { bgcolor: "primary.dark", opacity: 0.9 },
+                        py: 1.1,
+                        borderRadius: 2,
                       }}
                     >
-                      Enroll Now
+                      Enroll now
                     </Button>
                   )}
                 </CardContent>
