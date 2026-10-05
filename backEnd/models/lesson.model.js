@@ -41,7 +41,7 @@ const lessonSchema = mongoose.Schema({
 
     type: {
         type: String,
-        enum: ["video", "text", "quiz", "assignment"],
+        enum: ["video", "article", "quiz"],
         required: true
     },
 
