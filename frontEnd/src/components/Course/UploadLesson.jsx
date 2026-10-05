@@ -21,6 +21,8 @@ import {
   DialogTitle,
   DialogActions,
   Chip,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
@@ -107,13 +109,11 @@ export default function UploadLesson() {
 
   const [quizSettings, setQuizSettings] = useState({
     questionsCount: 5,
-    topic: "",
   });
-
-  console.log("selectedLessonIds:", selectedLessonIds);
-  console.log("selectedLessons:", selectedLessons);
-  console.log("lessonTexts:", lessonTexts);
-  console.log("lessonContent:", lessonContent);
+  // console.log("selectedLessonIds:", selectedLessonIds);
+  // console.log("selectedLessons:", selectedLessons);
+  // console.log("lessonTexts:", lessonTexts);
+  // console.log("lessonContent:", lessonContent);
 
   const chatMutation = useMutation({
     mutationFn: async (summary) => {
@@ -130,6 +130,7 @@ export default function UploadLesson() {
           },
         },
       );
+      console.log("AI response:", res.data);
       return res.data;
     },
 
@@ -137,25 +138,45 @@ export default function UploadLesson() {
     // لما الـ API يرجع بنجاح
     // --------------------------------------------------
     onSuccess: (data) => {
-      const quiz = JSON.parse(data.respo);
-      setFormData({
-        title: quiz.title,
-        description: quiz.description,
-        order: quiz.order,
-        type: quiz.type,
-        vUrl: "",
-        isFree: quiz.isFree,
-        videoFile: null,
-        articleContent: "", // ✅ جديد
+      const generated = JSON.parse(data.respo);
 
-        questions: quiz.questions.map((q) => ({
-          text: q.question,
-          options: q.options,
-          correctIndex: q.options.indexOf(q.correctAnswer),
-        })),
-      });
+      if (generated.type === "quiz") {
+        setFormData({
+          title: generated.title,
+          description: generated.description,
+          order: generated.order,
+          type: generated.type,
+          vUrl: "",
+          isFree: generated.isFree,
+          videoFile: null,
+
+          questions: generated.questions.map((q) => ({
+            text: q.question,
+            options: q.options,
+            correctIndex: q.options.indexOf(q.correctAnswer),
+          })),
+        });
+      }
+
+      if (generated.type === "article") {
+        setFormData({
+          title: generated.title,
+          description: generated.description,
+          order: generated.order,
+          type: generated.type,
+          vUrl: "",
+          isFree: generated.isFree,
+          videoFile: null,
+
+          articleContent: generated.articleContent,
+
+          questions: [],
+        });
+      }
     },
   });
+  console.log("Quiz generated successfully:", formData);
+
   const LessonMutation = useMutation({
     mutationFn: async (payload) => {
       const token = localStorage.getItem("token");
@@ -367,7 +388,7 @@ export default function UploadLesson() {
       ? "نشر المقال"
       : "نشر الدرس";
 
-  const articleWordCount = formData.articleContent.trim()
+  const articleWordCount = formData.articleContent?.trim()
     ? formData.articleContent.trim().split(/\s+/).length
     : 0;
 
@@ -557,43 +578,68 @@ export default function UploadLesson() {
 
           {/* ---------------- Article editor (يظهر بس لو النوع مقال) ---------------- */}
           {isArticle && (
-            <Box
-              sx={{
-                bgcolor: "background.paper",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: "18px",
-                p: 3,
-                mb: 3,
-              }}
-            >
-              <Typography
+            <>
+              <Button
+                fullWidth
+                disabled={chatMutation.isPending}
+                startIcon={
+                  chatMutation.isPending ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <AutoAwesomeIcon />
+                  )
+                }
+                onClick={() => {
+                  setOpenQuizDialog(true);
+                }}
                 sx={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "text.primary",
-                  mb: 2.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "10px",
                 }}
               >
-                محتوى المقال
-              </Typography>
+                {chatMutation.isPending
+                  ? " جاري توليد المقال..."
+                  : "توليد مقال تلقائي"}
+              </Button>
+              <Box
+                sx={{
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "18px",
+                  p: 3,
+                  my: 3,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "text.primary",
+                    mb: 2.5,
+                  }}
+                >
+                  محتوى المقال
+                </Typography>
 
-              <TextField
-                fullWidth
-                multiline
-                minRows={12}
-                label="نص المقال"
-                placeholder="اكتب محتوى المقال هنا..."
-                value={formData.articleContent}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    articleContent: e.target.value,
-                  }))
-                }
-                sx={fieldSx}
-              />
-            </Box>
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={12}
+                  label="نص المقال"
+                  placeholder="اكتب محتوى المقال هنا..."
+                  value={formData.articleContent}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      articleContent: e.target.value,
+                    }))
+                  }
+                  sx={fieldSx}
+                />
+              </Box>
+            </>
           )}
 
           {/* ---------------- Quiz builder (يظهر بس لو النوع كويز) ---------------- */}
@@ -968,7 +1014,7 @@ export default function UploadLesson() {
                   : isArticle
                     ? {
                         label: "محتوى المقال",
-                        done: !!formData.articleContent.trim(),
+                        done: !!formData.articleContent?.trim(),
                       }
                     : { label: "فيديو الدرس", done: !!formData.videoFile },
               ].map((item) => (
@@ -1025,31 +1071,42 @@ export default function UploadLesson() {
           </Box>
         </Box>
       </Box>
-      <Dialog open={openQuizDialog} fullWidth maxWidth="sm">
-        <DialogTitle>توليد كويز تلقائي</DialogTitle>
+      <Dialog
+        open={openQuizDialog}
+        onClose={() => setOpenQuizDialog(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>توليد محتوى تلقائي</DialogTitle>
 
         <DialogContent>
           <Stack spacing={3} sx={{ mt: 1 }}>
-            <TextField
-              label="عدد الأسئلة"
-              type="number"
-              fullWidth
-              value={quizSettings.questionsCount}
-              onChange={(e) =>
-                setQuizSettings((prev) => ({
-                  ...prev,
-                  questionsCount: Number(e.target.value),
-                }))
-              }
-              inputProps={{
-                min: 1,
-                max: 20,
-              }}
-            />
+            {/* عدد الأسئلة - يظهر للكويز فقط */}
+            {formData.type === "quiz" && (
+              <TextField
+                label="عدد الأسئلة"
+                type="number"
+                fullWidth
+                value={quizSettings.questionsCount}
+                onChange={(e) =>
+                  setQuizSettings((prev) => ({
+                    ...prev,
+                    questionsCount: Number(e.target.value),
+                  }))
+                }
+                slotProps={{
+                  htmlInput: {
+                    min: 1,
+                    max: 20,
+                  },
+                }}
+              />
+            )}
 
+            {/* اختيار الدروس */}
             <Box>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                اختر الدروس التي تريد أن يعتمد عليها الكويز
+                اختر الدروس التي تريد أن يعتمد عليها المحتوى
               </Typography>
 
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -1078,7 +1135,10 @@ export default function UploadLesson() {
               <Typography
                 variant="caption"
                 color="text.secondary"
-                sx={{ display: "block", mt: 1 }}
+                sx={{
+                  display: "block",
+                  mt: 1,
+                }}
               >
                 تم اختيار {selectedLessons.length} درس
               </Typography>
@@ -1087,12 +1147,7 @@ export default function UploadLesson() {
         </DialogContent>
 
         <DialogActions sx={{ p: 2 }}>
-          <Button
-            disabled={chatMutation.isPending}
-            onClick={() => setOpenQuizDialog(false)}
-          >
-            إلغاء
-          </Button>
+          <Button onClick={() => setOpenQuizDialog(false)}>إلغاء</Button>
 
           <Button
             variant="contained"
@@ -1105,7 +1160,9 @@ export default function UploadLesson() {
               )
             }
             onClick={() => {
-              const prompt = `
+              const prompt =
+                formData.type === "quiz"
+                  ? `
 Generate a multiple-choice quiz based ONLY on the lesson content below.
 
 Requirements:
@@ -1123,7 +1180,7 @@ Requirements:
 Return exactly this structure:
 
 {
-  "title": "(${selectedLessons.map((lesson) => lesson.title.split(" ").slice(0, 2)).join(" ")}) 'اختبار علي الدرس'",
+  "title": "اختبار الدرس",
   "description": "اختبار لقياس فهم الطالب لمحتوى الدرس",
   "order": 1,
   "type": "quiz",
@@ -1144,17 +1201,44 @@ Return exactly this structure:
 
 Lesson Content:
 ${lessonContent}
+`
+                  : `
+Generate an educational article based ONLY on the lesson content below.
+
+Requirements:
+- The article must be based ONLY on the lesson content.
+- Do not add information from outside the lesson content.
+- Use Arabic when the lesson is Arabic.
+- Make the article clear and well organized.
+- Include a suitable title.
+- Include a useful description.
+- No markdown.
+- Return ONLY valid JSON.
+
+Return exactly this structure:
+
+{
+  "title": "عنوان المقال",
+  "description": "وصف المقال",
+  "order": 1,
+  "type": "article",
+  "isFree": false,
+  "articleContent": "محتوى المقال"
+}
+
+Lesson Content:
+${lessonContent}
 `;
-
-              console.log("prompt:", prompt);
-
               chatMutation.mutate(prompt);
+
               setOpenQuizDialog(false);
             }}
           >
             {chatMutation.isPending
-              ? "جاري توليد الاختبار..."
-              : "توليد الاختبار"}
+              ? "جاري التوليد..."
+              : formData.type === "quiz"
+                ? "توليد الكويز"
+                : "توليد المقال"}
           </Button>
         </DialogActions>
       </Dialog>
