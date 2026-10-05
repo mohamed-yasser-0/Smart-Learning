@@ -45,23 +45,7 @@ const fieldSx = {
   "& .MuiInputLabel-root": { color: "text.secondary" },
   "& .MuiOutlinedInput-input": { color: "text.primary" },
 };
-// const lessonsData = [
-//   {
-//     id: 1,
-//     title: "الدرس الأول",
-//     content: "نص تجريبي للدرس الأول: مقدمة عن الموضوع وأهم المفاهيم الأساسية.",
-//   },
-//   {
-//     id: 2,
-//     title: "الدرس الثاني",
-//     content: "نص تجريبي للدرس الثاني: شرح تفصيلي للأمثلة والتطبيقات.",
-//   },
-//   {
-//     id: 3,
-//     title: "الدرس الثالث",
-//     content: "نص تجريبي للدرس الثالث: ملخص ومراجعة نهائية.",
-//   },
-// ];
+
 export default function UploadLesson() {
   const [formData, setFormData] = useState({
     title: "",
@@ -71,6 +55,7 @@ export default function UploadLesson() {
     vUrl: "",
     isFree: false,
     videoFile: null,
+    articleContent: "", // ✅ جديد: محتوى المقال
     questions: [
       {
         text: "",
@@ -95,6 +80,7 @@ export default function UploadLesson() {
 
   const navigate = useNavigate();
   const isQuiz = formData.type === "quiz";
+  const isArticle = formData.type === "article"; // ✅ جديد
 
   const [selectedLessonIds, setSelectedLessonIds] = useState([]);
 
@@ -160,6 +146,7 @@ export default function UploadLesson() {
         vUrl: "",
         isFree: quiz.isFree,
         videoFile: null,
+        articleContent: "", // ✅ جديد
 
         questions: quiz.questions.map((q) => ({
           text: q.question,
@@ -179,8 +166,9 @@ export default function UploadLesson() {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            // ✅ الكويز بيتبعت JSON عادي (زي ما الباك اند عايزه)، الدرس بيتبعت multipart زي ما كان بالظبط
-            "Content-Type": isQuiz ? "application/json" : "multipart/form-data",
+            // ✅ الكويز والمقال بيتبعتوا JSON عادي، الدرس بيتبعت multipart زي ما كان بالظبط
+            "Content-Type":
+              isQuiz || isArticle ? "application/json" : "multipart/form-data",
           },
         },
       );
@@ -188,7 +176,13 @@ export default function UploadLesson() {
     },
 
     onSuccess: () => {
-      toast.success("تم رفع الدرس بنجاح");
+      toast.success(
+        isQuiz
+          ? "تم رفع الكويز بنجاح"
+          : isArticle
+            ? "تم رفع المقال بنجاح"
+            : "تم رفع الدرس بنجاح",
+      );
       navigate(-1);
     },
 
@@ -234,6 +228,22 @@ export default function UploadLesson() {
       LessonMutation.mutate(quizPayload);
       return;
     }
+
+    // ✅ جديد: المقال
+    if (isArticle) {
+      const articlePayload = {
+        title: formData.title,
+        description: formData.description,
+        order: formData.order,
+        type: formData.type,
+        isFree: formData.isFree,
+        course: courseId,
+        articleContent: formData.articleContent, // غيّر الاسم لو الباك اند مستني اسم تاني
+      };
+      LessonMutation.mutate(articlePayload);
+      return;
+    }
+
     const LessonPayload = {
       title: formData.title,
       description: formData.description,
@@ -348,6 +358,19 @@ export default function UploadLesson() {
       ),
     }));
   };
+
+  // ✅ جديد: نصوص حسب النوع
+  const typeLabel = isQuiz ? "كويز" : isArticle ? "مقال" : "درس";
+  const publishLabel = isQuiz
+    ? "نشر الكويز"
+    : isArticle
+      ? "نشر المقال"
+      : "نشر الدرس";
+
+  const articleWordCount = formData.articleContent.trim()
+    ? formData.articleContent.trim().split(/\s+/).length
+    : 0;
+
   return (
     <Box
       component="form"
@@ -389,12 +412,14 @@ export default function UploadLesson() {
             <Typography
               sx={{ fontSize: 20, fontWeight: 700, color: "text.primary" }}
             >
-              {isQuiz ? "رفع كويز جديد" : "رفع درس جديد"}
+              {`رفع ${typeLabel} جديد`}
             </Typography>
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
               {isQuiz
                 ? "اكتب أسئلة الكويز بعدين اضغط نشر"
-                : "اكتب معلومات الدرس بعدين اضغط نشر"}
+                : isArticle
+                  ? "اكتب محتوى المقال بعدين اضغط نشر"
+                  : "اكتب معلومات الدرس بعدين اضغط نشر"}
             </Typography>
           </Box>
         </Stack>
@@ -422,50 +447,6 @@ export default function UploadLesson() {
           >
             <CloseIcon fontSize="small" />{" "}
           </IconButton>
-          {/* <Button
-            type="button"
-            variant="outlined"
-            startIcon={<SaveOutlined fontSize="small" />}
-            sx={{
-              borderColor: "divider",
-              color: "text.secondary",
-              textTransform: "none",
-              borderRadius: "10px",
-              px: 2.5,
-              "&:hover": {
-                borderColor: "primary.main",
-                bgcolor: "action.hover",
-              },
-            }}
-          >
-            حفظ كمسودة
-          </Button> */}
-
-          {/* <Button
-            type="submit"
-            disabled={LessonMutation.isPending}
-            variant="contained"
-            color="primary"
-            startIcon={
-              LessonMutation.isPending ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : (
-                <RocketLaunchRounded fontSize="small" />
-              )
-            }
-            sx={{
-              textTransform: "none",
-              borderRadius: "10px",
-              px: 3,
-              fontWeight: 600,
-            }}
-          >
-            {LessonMutation.isPending
-              ? "جاري النشر..."
-              : isQuiz
-                ? "نشر الكويز"
-                : "نشر الدرس"}
-          </Button> */}
         </Stack>
       </Stack>
       <Box
@@ -501,7 +482,7 @@ export default function UploadLesson() {
             <Stack spacing={2.5}>
               <TextField
                 fullWidth
-                label={isQuiz ? "عنوان الكويز" : "عنوان الدرس"}
+                label={`عنوان ال${typeLabel}`}
                 placeholder="مثال: مقدمة في React"
                 value={formData.title}
                 onChange={(e) =>
@@ -514,8 +495,8 @@ export default function UploadLesson() {
                 fullWidth
                 multiline
                 minRows={3}
-                label={isQuiz ? "وصف الكويز" : "وصف الدرس"}
-                placeholder="اشرح محتوى الدرس بإيجاز"
+                label={`وصف ال${typeLabel}`}
+                placeholder="اشرح المحتوى بإيجاز"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -573,6 +554,47 @@ export default function UploadLesson() {
               />
             </Stack>
           </Box>
+
+          {/* ---------------- Article editor (يظهر بس لو النوع مقال) ---------------- */}
+          {isArticle && (
+            <Box
+              sx={{
+                bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "18px",
+                p: 3,
+                mb: 3,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "text.primary",
+                  mb: 2.5,
+                }}
+              >
+                محتوى المقال
+              </Typography>
+
+              <TextField
+                fullWidth
+                multiline
+                minRows={12}
+                label="نص المقال"
+                placeholder="اكتب محتوى المقال هنا..."
+                value={formData.articleContent}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    articleContent: e.target.value,
+                  }))
+                }
+                sx={fieldSx}
+              />
+            </Box>
+          )}
 
           {/* ---------------- Quiz builder (يظهر بس لو النوع كويز) ---------------- */}
           {isQuiz && (
@@ -760,8 +782,8 @@ export default function UploadLesson() {
 
         {/* ---------------- Sidebar ---------------- */}
         <Box sx={{ width: { xs: "100%", lg: 340 }, flexShrink: 0 }}>
-          {/* Video Upload - بيظهر بس لو النوع مش كويز */}
-          {!isQuiz && (
+          {/* Video Upload - بيظهر بس لو النوع فيديو */}
+          {!isQuiz && !isArticle && (
             <Box
               sx={{
                 bgcolor: "background.paper",
@@ -881,6 +903,34 @@ export default function UploadLesson() {
             </Box>
           )}
 
+          {/* Article summary - بيظهر بس لو النوع مقال */}
+          {isArticle && (
+            <Box
+              sx={{
+                bgcolor: "background.paper",
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: "18px",
+                p: 2.5,
+                mb: 3,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "text.primary",
+                  mb: 1.5,
+                }}
+              >
+                ملخص المقال
+              </Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                عدد الكلمات: {articleWordCount}
+              </Typography>
+            </Box>
+          )}
+
           {/* Publish checklist */}
           <Box
             sx={{
@@ -904,7 +954,7 @@ export default function UploadLesson() {
             <Stack spacing={1}>
               {[
                 {
-                  label: isQuiz ? "عنوان ووصف الكويز" : "عنوان ووصف الدرس",
+                  label: `عنوان ووصف ال${typeLabel}`,
                   done: !!formData.title && !!formData.description,
                 },
                 isQuiz
@@ -915,7 +965,12 @@ export default function UploadLesson() {
                           q.text.trim() && q.options.every((op) => op.trim()),
                       ),
                     }
-                  : { label: "فيديو الدرس", done: !!formData.videoFile },
+                  : isArticle
+                    ? {
+                        label: "محتوى المقال",
+                        done: !!formData.articleContent.trim(),
+                      }
+                    : { label: "فيديو الدرس", done: !!formData.videoFile },
               ].map((item) => (
                 <Stack
                   key={item.label}
@@ -965,11 +1020,7 @@ export default function UploadLesson() {
                 py: 1.1,
               }}
             >
-              {LessonMutation.isPending
-                ? "جاري النشر..."
-                : isQuiz
-                  ? "نشر الكويز"
-                  : "نشر الدرس"}
+              {LessonMutation.isPending ? "جاري النشر..." : publishLabel}
             </Button>
           </Box>
         </Box>

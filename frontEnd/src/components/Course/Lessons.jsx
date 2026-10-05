@@ -562,28 +562,6 @@ export default function CourseLessons() {
                     <AutoAwesomeIcon sx={{ mr: 1 }} />
                     {" ملخص الفيديو"}
                   </IconButton>
-                  {/* <IconButton
-                    size="small"
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: "10px",
-                      color: "text.secondary",
-                    }}
-                  >
-                    <BookmarkBorderRounded fontSize="small" />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: "10px",
-                      color: "text.secondary",
-                    }}
-                  >
-                    <DownloadRounded fontSize="small" />
-                  </IconButton> */}
                 </Stack>
               </Stack>
 
@@ -957,6 +935,184 @@ export default function CourseLessons() {
             </>
           )}
           <div ref={bottomRef} />
+
+          {/* ================= Article page (يظهر بس لو الدرس مقال) ================= */}
+          {activeLesson.type === "article" && (
+            <Box>
+              {/* Header card */}
+              <Box
+                sx={{
+                  position: "relative",
+                  borderRadius: "18px",
+                  overflow: "hidden",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 60%, ${theme.palette.background.default} 100%)`,
+                  p: { xs: 2.5, sm: 4 },
+                  mb: 3,
+                }}
+              >
+                <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                  <Chip
+                    icon={<ArticleRounded sx={{ fontSize: 16 }} />}
+                    label="مقال"
+                    size="small"
+                    sx={{
+                      bgcolor: alpha(theme.palette.secondary.main, 0.15),
+                      color: "secondary.main",
+                      fontWeight: 600,
+                      fontSize: 12,
+                      border: "1px solid",
+                      borderColor: alpha(theme.palette.secondary.main, 0.35),
+                      "& .MuiChip-icon": { color: "secondary.main" },
+                    }}
+                  />
+                  <Chip
+                    label={activeLesson.isFree ? "مجاني" : "مدفوع"}
+                    size="small"
+                    sx={{
+                      bgcolor: "action.hover",
+                      color: "text.secondary",
+                      fontSize: 12,
+                      fontFamily: "monospace",
+                      border: "1px solid",
+                      borderColor: "divider",
+                    }}
+                  />
+                </Stack>
+
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "primary.light",
+                    fontWeight: 600,
+                    letterSpacing: 0.5,
+                    mb: 0.5,
+                  }}
+                >
+                  LESSON {activeLesson.order}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: 22, sm: 28 },
+                    fontWeight: 700,
+                    color: "text.primary",
+                    mb: activeLesson.description ? 1.5 : 0,
+                  }}
+                >
+                  {activeLesson.title}
+                </Typography>
+                {activeLesson.description && (
+                  <Typography
+                    sx={{
+                      fontSize: 14.5,
+                      lineHeight: 1.9,
+                      color: "text.secondary",
+                    }}
+                  >
+                    {activeLesson.description}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Article body */}
+              <Box
+                sx={{
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "18px",
+                  p: { xs: 2.5, sm: 4 },
+                  mb: 3,
+                }}
+              >
+                {activeLesson.articleContent ? (
+                  <Typography
+                    sx={{
+                      fontSize: 15.5,
+                      lineHeight: 2,
+                      color: "text.primary",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {activeLesson.articleContent}
+                  </Typography>
+                ) : (
+                  <Typography
+                    sx={{
+                      fontSize: 14,
+                      color: "text.secondary",
+                      textAlign: "center",
+                    }}
+                  >
+                    لا يوجد محتوى لهذا المقال بعد.
+                  </Typography>
+                )}
+              </Box>
+
+              <Divider sx={{ my: 3 }} />
+
+              <Stack direction="row" sx={{ justifyContent: "space-between" }}>
+                <Button
+                  variant="outlined"
+                  disabled={
+                    lessons.findIndex((l) => l._id === activeLesson._id) === 0
+                  }
+                  onClick={() => {
+                    const idx = lessons.findIndex(
+                      (l) => l._id === activeLesson._id,
+                    );
+                    if (idx > 0) setLessonId(lessons[idx - 1]._id);
+                  }}
+                  sx={{
+                    borderColor: "divider",
+                    color: "text.secondary",
+                    textTransform: "none",
+                    borderRadius: "10px",
+                    px: 2.5,
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      bgcolor: "action.hover",
+                    },
+                  }}
+                >
+                  ← Previous lesson
+                </Button>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    progressHandleSubmit(undefined);
+                  }}
+                >
+                  <Button
+                    onClick={() => {
+                      handleMarkComplete();
+                    }}
+                    type="submit"
+                    disabled={progressMutation.isPending}
+                    variant="contained"
+                    color="primary"
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: "10px",
+                      px: 3,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {progressMutation.isPending ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : completedLessons.has(activeLesson._id) ? (
+                      "was completed"
+                    ) : (
+                      "Mark complete"
+                    )}
+                  </Button>
+                </form>
+              </Stack>
+            </Box>
+          )}
+          {/* =============== end Article page =============== */}
+
           {activeLesson.type === "quiz" && (
             <Box
               sx={{
@@ -1542,22 +1698,19 @@ export default function CourseLessons() {
                       setAnswers([]);
                       setQuiz({ currentQuestion: 0, timeLeft: 60 });
 
-                      if (completedLessons.has(lesson._id)) {
-                        let score = click[0].quizScore[0];
-                        const total = click[0].quizScore[1];
+                      // ✅ الفيديو والمقال مالهمش quizScore، فنتأكد إنه موجود
+                      const savedScore = click?.[0]?.quizScore;
 
-                        const percentage = click[0].quizScore[2];
+                      if (completedLessons.has(lesson._id) && savedScore) {
                         // =========================
                         // Save quiz result
                         // =========================
                         setQuizFinished(true);
-                        const result = {
-                          score,
-                          total,
-                          percentage,
-                        };
-
-                        setQuizResult(result);
+                        setQuizResult({
+                          score: savedScore[0],
+                          total: savedScore[1],
+                          percentage: savedScore[2],
+                        });
                       } else {
                         setQuizFinished(false);
                       }
@@ -1599,9 +1752,11 @@ export default function CourseLessons() {
                     >
                       {lesson.type === "quiz"
                         ? "Quiz"
-                        : lesson.isFree
-                          ? "مجاني"
-                          : ""}
+                        : lesson.type === "article"
+                          ? "Article"
+                          : lesson.isFree
+                            ? "مجاني"
+                            : ""}
                     </Typography>
                   </Button>
                 );

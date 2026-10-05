@@ -44,7 +44,9 @@ const lessonSchema = mongoose.Schema({
         enum: ["video", "article", "quiz"],
         required: true
     },
-
+    articleContent: {
+        type: String
+    },
     isFree: {
         type: Boolean,
         default: false
