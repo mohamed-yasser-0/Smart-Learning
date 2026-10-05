@@ -48,16 +48,7 @@ import { lime } from "@mui/material/colors";
 import { jwtDecode } from "jwt-decode";
 
 // ---- بيانات الكورس نفسه (لسه مصدرها مش من الـ lessons endpoint) ----
-const course = {
-  title: "React & TypeScript Mastery",
-  category: "Frontend",
-  level: "Advanced",
-  instructor: "Marcus Rivera",
-  rating: 4.8,
-  students: 7340,
-  duration: "22h 15m",
-  progress: 42,
-};
+
 const quiz = {
   title: "Machine Learning Basics",
   totalQuestions: 5,
@@ -252,27 +243,62 @@ export default function CourseLessons() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, chatMutation.isPending]);
+  const {
+    data: CourseData,
+    isLoading: CourseIsLoading,
+    isError: CourseIsError,
+    error: CourseError,
+  } = useQuery({
+    queryKey: ["courses"],
+
+    queryFn: async () => {
+      const res = await axios.get(
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      console.log("COURSE API RESPONSE:", res.data);
+
+      return res.data;
+    },
+  });
+
+  const courses = CourseData?.data?.course;
+
+  console.log("coursesssssssss:", courses);
+  const activeCourse = courses?.find((course) => course._id === id);
   if (!lessons?.length)
     return (
-      <Button
-        variant="contained"
-        onClick={() => navigate(`${location.pathname}/UploadLesson`)}
-        startIcon={<CloudUploadRounded sx={{ m: 0 }} />}
-        sx={{
-          borderRadius: isMobile ? "50%" : "12px",
-          minWidth: isMobile ? 48 : "auto",
-          width: isMobile ? 48 : "auto",
-          height: isMobile ? 48 : "auto",
-          p: isMobile ? 0 : "8px 24px",
-          textTransform: "none",
-          fontWeight: "bold",
-          "& .MuiButton-startIcon": {
-            margin: isMobile ? 0 : undefined,
-          },
-        }}
-      >
-        {!isMobile && "رفع"}
-      </Button>
+      <>
+        {activeCourse?.userId === decodedToken?.id ? (
+          <Button
+            variant="contained"
+            onClick={() => navigate(`${location.pathname}/UploadLesson`)}
+            startIcon={<CloudUploadRounded sx={{ m: 0 }} />}
+            sx={{
+              borderRadius: isMobile ? "50%" : "12px",
+              minWidth: isMobile ? 48 : "auto",
+              width: isMobile ? 48 : "auto",
+              height: isMobile ? 48 : "auto",
+              p: isMobile ? 0 : "8px 24px",
+              textTransform: "none",
+              fontWeight: "bold",
+              "& .MuiButton-startIcon": {
+                margin: isMobile ? 0 : undefined,
+              },
+            }}
+          >
+            {!isMobile && "رفع"}
+          </Button>
+        ) : (
+          <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
+            الدورة فارغة
+          </Typography>
+        )}
+      </>
     );
 
   const activeLesson = lessons.find((l) => l._id === lessonId) || "";
@@ -412,7 +438,7 @@ export default function CourseLessons() {
             /
           </Box>{" "}
           <Box component="span" sx={{ color: "text.primary" }}>
-            {course.title}
+            {"title"}
           </Box>
         </Typography>
       </Stack>
@@ -454,7 +480,7 @@ export default function CourseLessons() {
                   }}
                 >
                   <Chip
-                    label={course.category}
+                    label={"category"}
                     size="small"
                     sx={{
                       bgcolor: alpha(theme.palette.secondary.main, 0.15),
@@ -579,10 +605,10 @@ export default function CourseLessons() {
                       bgcolor: "primary.main",
                     }}
                   >
-                    {course.instructor[0]}
+                    {"course.instructor[0]"}
                   </Avatar>
                   <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                    {course.instructor}
+                    {"course.instructor"}
                   </Typography>
                 </Stack>
                 <Stack
@@ -594,7 +620,7 @@ export default function CourseLessons() {
                     sx={{ fontSize: 15, color: "text.secondary" }}
                   />
                   <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                    {course.duration}
+                    {"course.duration"}
                   </Typography>
                 </Stack>
                 <Stack
@@ -606,7 +632,7 @@ export default function CourseLessons() {
                     sx={{ fontSize: 15, color: "text.secondary" }}
                   />
                   <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                    {course.students.toLocaleString()}
+                    {"course.students"}
                   </Typography>
                 </Stack>
                 <Stack
@@ -622,7 +648,7 @@ export default function CourseLessons() {
                       fontWeight: 600,
                     }}
                   >
-                    {course.rating}
+                    {"course.rating"}
                   </Typography>
                 </Stack>
               </Stack>
@@ -1451,31 +1477,33 @@ export default function CourseLessons() {
                   mb: 0.5,
                 }}
               >
-                {course.title}
+                {"course.title"}
               </Typography>
               <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>
                 {completedCount} of {lessons.length} lessons completed
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              onClick={() => navigate(`${location.pathname}/UploadLesson`)}
-              startIcon={<CloudUploadRounded sx={{ m: 0 }} />}
-              sx={{
-                borderRadius: isMobile ? "50%" : "12px",
-                minWidth: isMobile ? 48 : "auto",
-                width: isMobile ? 48 : "auto",
-                height: isMobile ? 48 : "auto",
-                p: isMobile ? 0 : "8px 24px",
-                textTransform: "none",
-                fontWeight: "bold",
-                "& .MuiButton-startIcon": {
-                  margin: isMobile ? 0 : undefined,
-                },
-              }}
-            >
-              {!isMobile && "رفع"}
-            </Button>
+            {activeCourse?.userId === decodedToken?.id && (
+              <Button
+                variant="contained"
+                onClick={() => navigate(`${location.pathname}/UploadLesson`)}
+                startIcon={<CloudUploadRounded sx={{ m: 0 }} />}
+                sx={{
+                  borderRadius: isMobile ? "50%" : "12px",
+                  minWidth: isMobile ? 48 : "auto",
+                  width: isMobile ? 48 : "auto",
+                  height: isMobile ? 48 : "auto",
+                  p: isMobile ? 0 : "8px 24px",
+                  textTransform: "none",
+                  fontWeight: "bold",
+                  "& .MuiButton-startIcon": {
+                    margin: isMobile ? 0 : undefined,
+                  },
+                }}
+              >
+                {!isMobile && "رفع"}
+              </Button>
+            )}
           </Box>
 
           <LinearProgress

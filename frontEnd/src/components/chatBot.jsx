@@ -21,7 +21,6 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 
-
 const INITIAL_MESSAGES = [
   {
     id: 1,
@@ -148,7 +147,6 @@ Student message: and my name is ${user?.username || "Student"}: ${trimmed}`);
         position: "fixed",
         bottom: { xs: 16, sm: 24 },
         right: { xs: 16, sm: 24 },
-        left: { xs: 16, sm: "auto" },
         zIndex: 1300,
         display: "flex",
         flexDirection: "column",

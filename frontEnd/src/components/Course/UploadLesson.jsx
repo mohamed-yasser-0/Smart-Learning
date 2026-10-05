@@ -16,17 +16,23 @@ import {
   Switch,
   Radio,
   RadioGroup,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
+  Chip,
 } from "@mui/material";
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
-import SaveOutlined from "@mui/icons-material/SaveOutlined";
 import RocketLaunchRounded from "@mui/icons-material/RocketLaunchRounded";
 import AddCircleOutlineRounded from "@mui/icons-material/AddCircleOutlineRounded";
 import DeleteOutlineRounded from "@mui/icons-material/DeleteOutlineRounded";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate, useParams } from "react-router-dom";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import CloseIcon from "@mui/icons-material/Close";
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -39,29 +45,130 @@ const fieldSx = {
   "& .MuiInputLabel-root": { color: "text.secondary" },
   "& .MuiOutlinedInput-input": { color: "text.primary" },
 };
-
+// const lessonsData = [
+//   {
+//     id: 1,
+//     title: "الدرس الأول",
+//     content: "نص تجريبي للدرس الأول: مقدمة عن الموضوع وأهم المفاهيم الأساسية.",
+//   },
+//   {
+//     id: 2,
+//     title: "الدرس الثاني",
+//     content: "نص تجريبي للدرس الثاني: شرح تفصيلي للأمثلة والتطبيقات.",
+//   },
+//   {
+//     id: 3,
+//     title: "الدرس الثالث",
+//     content: "نص تجريبي للدرس الثالث: ملخص ومراجعة نهائية.",
+//   },
+// ];
 export default function UploadLesson() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [order, setOrder] = useState(1);
-  const [type, setType] = useState("video");
-  const [vUrl, setVUrl] = useState("");
-  const [isFree, setIsFree] = useState(false);
-  const [videoFile, setVideoFile] = useState(null);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    order: 1,
+    type: "video",
+    vUrl: "",
+    isFree: false,
+    videoFile: null,
+    questions: [
+      {
+        text: "",
+        options: ["", ""],
+        correctIndex: 0,
+      },
+    ],
+  });
+  const { id: courseId } = useParams();
 
-  // ✅ ستيت خاص بالكويز بس - مش هيأثر على اللوجيك القديم خالص
-  const [questions, setQuestions] = useState([
-    { text: "", options: ["", ""], correctIndex: 0 },
-  ]);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["lessons", courseId],
+    queryFn: async () => {
+      const res = await axios.get(
+        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/lessons/${courseId}`,
+      );
+      return res.data;
+    },
+    enabled: !!courseId,
+  });
+  const lessonsData = data?.data?.lesson || [];
 
   const navigate = useNavigate();
-  const { id: courseId } = useParams();
-  const video = {
-    url: vUrl,
-    provider: "youTube",
-  };
-  const isQuiz = type === "quiz";
+  const isQuiz = formData.type === "quiz";
 
+  const [selectedLessonIds, setSelectedLessonIds] = useState([]);
+
+  const toggleLesson = (id) => {
+    setSelectedLessonIds((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id],
+    );
+  };
+
+  // الدروس التي اختارها المستخدم
+  const selectedLessons = lessonsData.filter((lesson) =>
+    selectedLessonIds.includes(lesson._id),
+  );
+
+  // محتوى الدروس المختارة فقط
+  const lessonTexts = selectedLessons
+    .map((lesson) => lesson.video?.text)
+    .filter(Boolean);
+
+  // كل محتوى الدروس في نص واحد
+  const lessonContent = lessonTexts.join("\n\n");
+
+  const [openQuizDialog, setOpenQuizDialog] = useState(false);
+
+  const [quizSettings, setQuizSettings] = useState({
+    questionsCount: 5,
+    topic: "",
+  });
+
+  console.log("selectedLessonIds:", selectedLessonIds);
+  console.log("selectedLessons:", selectedLessons);
+  console.log("lessonTexts:", lessonTexts);
+  console.log("lessonContent:", lessonContent);
+
+  const chatMutation = useMutation({
+    mutationFn: async (summary) => {
+      const token = localStorage.getItem("token");
+
+      const res = await axios.post(
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/ai/Summarize",
+        {
+          summary,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      return res.data;
+    },
+
+    // --------------------------------------------------
+    // لما الـ API يرجع بنجاح
+    // --------------------------------------------------
+    onSuccess: (data) => {
+      const quiz = JSON.parse(data.respo);
+      setFormData({
+        title: quiz.title,
+        description: quiz.description,
+        order: quiz.order,
+        type: quiz.type,
+        vUrl: "",
+        isFree: quiz.isFree,
+        videoFile: null,
+
+        questions: quiz.questions.map((q) => ({
+          text: q.question,
+          options: q.options,
+          correctIndex: q.options.indexOf(q.correctAnswer),
+        })),
+      });
+    },
+  });
   const LessonMutation = useMutation({
     mutationFn: async (payload) => {
       const token = localStorage.getItem("token");
@@ -101,24 +208,24 @@ export default function UploadLesson() {
 
     // ✅ تحقق إضافي للكويز بس (مش بيغير تحقق الدرس العادي)
     if (isQuiz) {
-      const invalid = questions.some(
+      const invalid = formData.questions.some(
         (q) => !q.text.trim() || q.options.some((op) => !op.trim()),
       );
-      if (invalid) {
-        toast.error("أكمل كل أسئلة الكويز واختياراتها الأول");
-        return;
-      }
+      // if (invalid) {
+      //   toast.error("أكمل كل أسئلة الكويز واختياراتها الأول");
+      //   return;
+      // }
     }
 
     if (isQuiz) {
       const quizPayload = {
-        title,
-        description,
-        order,
-        type,
-        isFree,
+        title: formData.title,
+        description: formData.description,
+        order: formData.order,
+        type: formData.type,
+        isFree: formData.isFree,
         course: courseId,
-        questions: questions.map((q) => ({
+        questions: formData.questions.map((q) => ({
           question: q.text,
           options: q.options,
           correctAnswer: q.options[q.correctIndex],
@@ -128,19 +235,19 @@ export default function UploadLesson() {
       return;
     }
     const LessonPayload = {
-      title,
-      description,
-      order,
-      type,
-      isFree,
+      title: formData.title,
+      description: formData.description,
+      order: formData.order,
+      type: formData.type,
+      isFree: formData.isFree,
       course: courseId,
-      if(videoFile) {
-        video: videoFile;
-      },
-      video: {
-        url: "https://youtu.be/ZkHj91CKoVE?si=gj8By5lLuQsBBZcT",
-        provider: "youTube",
-      },
+      ...(formData.videoFile && { video: formData.videoFile }),
+      ...(formData.vUrl && {
+        video: {
+          url: formData.vUrl,
+          provider: "youTube",
+        },
+      }),
     };
     LessonMutation.mutate(LessonPayload);
   };
@@ -148,67 +255,98 @@ export default function UploadLesson() {
   const handleVideo = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      setVideoFile(file);
+      setFormData((prev) => ({ ...prev, videoFile: file }));
     }
   };
 
   // ---------------- Quiz helpers ----------------
   const addQuestion = () => {
-    setQuestions((prev) => [
+    setFormData((prev) => ({
       ...prev,
-      { text: "", options: ["", ""], correctIndex: 0 },
-    ]);
+      questions: [
+        ...prev.questions,
+        {
+          text: "",
+          options: ["", ""],
+          correctIndex: 0,
+        },
+      ],
+    }));
   };
 
   const removeQuestion = (qIndex) => {
-    setQuestions((prev) => prev.filter((_, i) => i !== qIndex));
+    setFormData((prev) => ({
+      ...prev,
+      questions: prev.questions.filter((_, i) => i !== qIndex),
+    }));
   };
 
   const updateQuestionText = (qIndex, value) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => (i === qIndex ? { ...q, text: value } : q)),
-    );
+    setFormData((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) =>
+        i === qIndex ? { ...q, text: value } : q,
+      ),
+    }));
   };
 
   const addOption = (qIndex) => {
-    setQuestions((prev) =>
-      prev.map((q, i) =>
+    setFormData((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) =>
         i === qIndex ? { ...q, options: [...q.options, ""] } : q,
       ),
-    );
+    }));
   };
 
   const removeOption = (qIndex, oIndex) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => {
+    setFormData((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) => {
         if (i !== qIndex) return q;
+
         const newOptions = q.options.filter((_, oi) => oi !== oIndex);
+
         const newCorrect =
           q.correctIndex === oIndex
             ? 0
             : q.correctIndex > oIndex
               ? q.correctIndex - 1
               : q.correctIndex;
-        return { ...q, options: newOptions, correctIndex: newCorrect };
+
+        return {
+          ...q,
+          options: newOptions,
+          correctIndex: newCorrect,
+        };
       }),
-    );
+    }));
   };
 
   const updateOptionText = (qIndex, oIndex, value) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => {
+    setFormData((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) => {
         if (i !== qIndex) return q;
+
         const newOptions = [...q.options];
         newOptions[oIndex] = value;
-        return { ...q, options: newOptions };
+
+        return {
+          ...q,
+          options: newOptions,
+        };
       }),
-    );
+    }));
   };
 
   const setCorrectOption = (qIndex, oIndex) => {
-    setQuestions((prev) =>
-      prev.map((q, i) => (i === qIndex ? { ...q, correctIndex: oIndex } : q)),
-    );
+    setFormData((prev) => ({
+      ...prev,
+      questions: prev.questions.map((q, i) =>
+        i === qIndex ? { ...q, correctIndex: oIndex } : q,
+      ),
+    }));
   };
   return (
     <Box
@@ -270,7 +408,21 @@ export default function UploadLesson() {
             alignItems: "center",
           }}
         >
-          <Button
+          <IconButton
+            onClick={() => navigate(-1)}
+            size="small"
+            sx={{
+              bgcolor: "background.paper",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: "10px",
+              color: "text.secondary",
+              "&:hover": { bgcolor: "action.hover" },
+            }}
+          >
+            <CloseIcon fontSize="small" />{" "}
+          </IconButton>
+          {/* <Button
             type="button"
             variant="outlined"
             startIcon={<SaveOutlined fontSize="small" />}
@@ -287,9 +439,9 @@ export default function UploadLesson() {
             }}
           >
             حفظ كمسودة
-          </Button>
+          </Button> */}
 
-          <Button
+          {/* <Button
             type="submit"
             disabled={LessonMutation.isPending}
             variant="contained"
@@ -313,10 +465,9 @@ export default function UploadLesson() {
               : isQuiz
                 ? "نشر الكويز"
                 : "نشر الدرس"}
-          </Button>
+          </Button> */}
         </Stack>
       </Stack>
-
       <Box
         sx={{
           display: "flex",
@@ -352,8 +503,10 @@ export default function UploadLesson() {
                 fullWidth
                 label={isQuiz ? "عنوان الكويز" : "عنوان الدرس"}
                 placeholder="مثال: مقدمة في React"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, title: e.target.value }))
+                }
                 sx={fieldSx}
               />
 
@@ -363,8 +516,13 @@ export default function UploadLesson() {
                 minRows={3}
                 label={isQuiz ? "وصف الكويز" : "وصف الدرس"}
                 placeholder="اشرح محتوى الدرس بإيجاز"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
+                }
                 sx={fieldSx}
               />
 
@@ -373,17 +531,24 @@ export default function UploadLesson() {
                   fullWidth
                   type="number"
                   label="ترتيب الدرس"
-                  value={order}
-                  onChange={(e) => setOrder(Number(e.target.value))}
+                  value={formData.order}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      order: Number(e.target.value),
+                    }))
+                  }
                   sx={fieldSx}
                 />
 
                 <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>نوع الدرس</InputLabel>
                   <Select
-                    value={type}
+                    value={formData.type}
                     label="نوع الدرس"
-                    onChange={(e) => setType(e.target.value)}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, type: e.target.value }))
+                    }
                   >
                     <MenuItem value="video">Video</MenuItem>
                     <MenuItem value="article">Article</MenuItem>
@@ -395,8 +560,13 @@ export default function UploadLesson() {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={isFree}
-                    onChange={(e) => setIsFree(e.target.checked)}
+                    checked={formData.isFree}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        isFree: e.target.checked,
+                      }))
+                    }
                   />
                 }
                 label="درس مجاني"
@@ -406,152 +576,185 @@ export default function UploadLesson() {
 
           {/* ---------------- Quiz builder (يظهر بس لو النوع كويز) ---------------- */}
           {isQuiz && (
-            <Box
-              sx={{
-                bgcolor: "background.paper",
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: "18px",
-                p: 3,
-                mb: 3,
-              }}
-            >
-              <Stack
-                direction="row"
+            <>
+              <Button
+                fullWidth
+                disabled={chatMutation.isPending}
+                startIcon={
+                  chatMutation.isPending ? (
+                    <CircularProgress size={18} color="inherit" />
+                  ) : (
+                    <AutoAwesomeIcon />
+                  )
+                }
+                onClick={() => {
+                  setOpenQuizDialog(true);
+                }}
                 sx={{
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  mb: 2.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "10px",
                 }}
               >
-                <Typography
-                  sx={{ fontSize: 15, fontWeight: 700, color: "text.primary" }}
-                >
-                  أسئلة الكويز
-                </Typography>
-                <Button
-                  type="button"
-                  size="small"
-                  onClick={addQuestion}
-                  startIcon={<AddCircleOutlineRounded fontSize="small" />}
+                {chatMutation.isPending
+                  ? "جاري توليد الكويز..."
+                  : "توليد كويز تلقائي"}
+              </Button>
+              <Box
+                sx={{
+                  bgcolor: "background.paper",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: "18px",
+                  p: 3,
+                  my: 3,
+                }}
+              >
+                <Stack
+                  direction="row"
                   sx={{
-                    textTransform: "none",
-                    borderRadius: "10px",
-                    fontWeight: 600,
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: 2.5,
                   }}
                 >
-                  إضافة سؤال
-                </Button>
-              </Stack>
-
-              <Stack spacing={3}>
-                {questions.map((q, qIndex) => (
-                  <Box
-                    key={qIndex}
+                  <Typography
                     sx={{
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: "14px",
-                      p: 2.5,
-                      bgcolor: "background.default",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "text.primary",
                     }}
                   >
-                    <Stack
-                      direction="row"
+                    أسئلة الكويز
+                  </Typography>
+                  <Button
+                    type="button"
+                    size="small"
+                    onClick={addQuestion}
+                    startIcon={<AddCircleOutlineRounded fontSize="small" />}
+                    sx={{
+                      textTransform: "none",
+                      borderRadius: "10px",
+                      fontWeight: 600,
+                    }}
+                  >
+                    إضافة سؤال
+                  </Button>
+                </Stack>
+
+                <Stack spacing={3}>
+                  {formData.questions.map((q, qIndex) => (
+                    <Box
+                      key={qIndex}
                       sx={{
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        mb: 2,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: "14px",
+                        p: 2.5,
+                        bgcolor: "background.default",
                       }}
                     >
-                      <Typography
+                      <Stack
+                        direction="row"
                         sx={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: "text.secondary",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          mb: 2,
                         }}
                       >
-                        سؤال {qIndex + 1}
-                      </Typography>
-                      {questions.length > 1 && (
-                        <IconButton
-                          size="small"
-                          onClick={() => removeQuestion(qIndex)}
-                          sx={{ color: "error.main" }}
+                        <Typography
+                          sx={{
+                            fontSize: 13,
+                            fontWeight: 700,
+                            color: "text.secondary",
+                          }}
                         >
-                          <DeleteOutlineRounded fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Stack>
-
-                    <TextField
-                      fullWidth
-                      label="نص السؤال"
-                      value={q.text}
-                      onChange={(e) =>
-                        updateQuestionText(qIndex, e.target.value)
-                      }
-                      sx={{ ...fieldSx, mb: 2 }}
-                    />
-
-                    <Typography
-                      sx={{ fontSize: 12.5, color: "text.secondary", mb: 1 }}
-                    >
-                      الاختيارات (اختار الإجابة الصح)
-                    </Typography>
-
-                    <RadioGroup
-                      value={q.correctIndex}
-                      onChange={(e) =>
-                        setCorrectOption(qIndex, Number(e.target.value))
-                      }
-                    >
-                      <Stack spacing={1.2}>
-                        {q.options.map((op, oIndex) => (
-                          <Stack
-                            key={oIndex}
-                            direction="row"
-                            spacing={1}
-                            sx={{ alignItems: "center" }}
+                          سؤال {qIndex + 1}
+                        </Typography>
+                        {formData.questions.length > 1 && (
+                          <IconButton
+                            size="small"
+                            onClick={() => removeQuestion(qIndex)}
+                            sx={{ color: "error.main" }}
                           >
-                            <Radio value={oIndex} size="small" />
-                            <TextField
-                              fullWidth
-                              size="small"
-                              placeholder={`اختيار ${oIndex + 1}`}
-                              value={op}
-                              onChange={(e) =>
-                                updateOptionText(qIndex, oIndex, e.target.value)
-                              }
-                              sx={fieldSx}
-                            />
-                            {q.options.length > 2 && (
-                              <IconButton
-                                size="small"
-                                onClick={() => removeOption(qIndex, oIndex)}
-                                sx={{ color: "error.main" }}
-                              >
-                                <DeleteOutlineRounded fontSize="small" />
-                              </IconButton>
-                            )}
-                          </Stack>
-                        ))}
+                            <DeleteOutlineRounded fontSize="small" />
+                          </IconButton>
+                        )}
                       </Stack>
-                    </RadioGroup>
 
-                    <Button
-                      type="button"
-                      size="small"
-                      onClick={() => addOption(qIndex)}
-                      startIcon={<AddCircleOutlineRounded fontSize="small" />}
-                      sx={{ textTransform: "none", mt: 1.5, fontWeight: 600 }}
-                    >
-                      إضافة اختيار
-                    </Button>
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
+                      <TextField
+                        fullWidth
+                        label="نص السؤال"
+                        value={q.text}
+                        onChange={(e) =>
+                          updateQuestionText(qIndex, e.target.value)
+                        }
+                        sx={{ ...fieldSx, mb: 2 }}
+                      />
+
+                      <Typography
+                        sx={{ fontSize: 12.5, color: "text.secondary", mb: 1 }}
+                      >
+                        الاختيارات (اختار الإجابة الصح)
+                      </Typography>
+
+                      <RadioGroup
+                        value={q.correctIndex}
+                        onChange={(e) =>
+                          setCorrectOption(qIndex, Number(e.target.value))
+                        }
+                      >
+                        <Stack spacing={1.2}>
+                          {q.options.map((op, oIndex) => (
+                            <Stack
+                              key={oIndex}
+                              direction="row"
+                              spacing={1}
+                              sx={{ alignItems: "center" }}
+                            >
+                              <Radio value={oIndex} size="small" />
+                              <TextField
+                                fullWidth
+                                size="small"
+                                placeholder={`اختيار ${oIndex + 1}`}
+                                value={op}
+                                onChange={(e) =>
+                                  updateOptionText(
+                                    qIndex,
+                                    oIndex,
+                                    e.target.value,
+                                  )
+                                }
+                                sx={fieldSx}
+                              />
+                              {q.options.length > 2 && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() => removeOption(qIndex, oIndex)}
+                                  sx={{ color: "error.main" }}
+                                >
+                                  <DeleteOutlineRounded fontSize="small" />
+                                </IconButton>
+                              )}
+                            </Stack>
+                          ))}
+                        </Stack>
+                      </RadioGroup>
+
+                      <Button
+                        type="button"
+                        size="small"
+                        onClick={() => addOption(qIndex)}
+                        startIcon={<AddCircleOutlineRounded fontSize="small" />}
+                        sx={{ textTransform: "none", mt: 1.5, fontWeight: 600 }}
+                      >
+                        إضافة اختيار
+                      </Button>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
+            </>
           )}
         </Box>
 
@@ -604,7 +807,7 @@ export default function UploadLesson() {
                   hidden
                   onChange={handleVideo}
                 />
-                {videoFile ? (
+                {formData.videoFile ? (
                   <>
                     <CloudUploadRounded
                       sx={{ fontSize: 30, color: "success.main" }}
@@ -617,7 +820,7 @@ export default function UploadLesson() {
                         px: 1,
                       }}
                     >
-                      {videoFile.name}
+                      {formData.videoFile.name}
                     </Typography>
                   </>
                 ) : (
@@ -633,13 +836,18 @@ export default function UploadLesson() {
                   </>
                 )}
               </Box>
-              <Box sx={{mt:3}}/>
+              <Box sx={{ mt: 3 }} />
               <TextField
                 fullWidth
                 type="string"
                 label="رفع لينك يوتيوب"
-                value={vUrl}
-                onChange={(e) => setVUrl(String(e.target.value))}
+                value={formData.vUrl}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    vUrl: String(e.target.value),
+                  }))
+                }
                 sx={fieldSx}
               />
             </Box>
@@ -668,7 +876,7 @@ export default function UploadLesson() {
                 ملخص الكويز
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                عدد الأسئلة: {questions.length}
+                عدد الأسئلة: {formData.questions.length}
               </Typography>
             </Box>
           )}
@@ -697,17 +905,17 @@ export default function UploadLesson() {
               {[
                 {
                   label: isQuiz ? "عنوان ووصف الكويز" : "عنوان ووصف الدرس",
-                  done: !!title && !!description,
+                  done: !!formData.title && !!formData.description,
                 },
                 isQuiz
                   ? {
                       label: "أسئلة الكويز",
-                      done: questions.every(
+                      done: formData.questions.every(
                         (q) =>
                           q.text.trim() && q.options.every((op) => op.trim()),
                       ),
                     }
-                  : { label: "فيديو الدرس", done: !!videoFile },
+                  : { label: "فيديو الدرس", done: !!formData.videoFile },
               ].map((item) => (
                 <Stack
                   key={item.label}
@@ -766,6 +974,139 @@ export default function UploadLesson() {
           </Box>
         </Box>
       </Box>
+      <Dialog open={openQuizDialog} fullWidth maxWidth="sm">
+        <DialogTitle>توليد كويز تلقائي</DialogTitle>
+
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 1 }}>
+            <TextField
+              label="عدد الأسئلة"
+              type="number"
+              fullWidth
+              value={quizSettings.questionsCount}
+              onChange={(e) =>
+                setQuizSettings((prev) => ({
+                  ...prev,
+                  questionsCount: Number(e.target.value),
+                }))
+              }
+              inputProps={{
+                min: 1,
+                max: 20,
+              }}
+            />
+
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                اختر الدروس التي تريد أن يعتمد عليها الكويز
+              </Typography>
+
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {lessonsData
+                  .filter((lesson) => lesson.video?.text)
+                  .map((lesson) => (
+                    <Chip
+                      key={lesson._id}
+                      label={lesson.title}
+                      clickable
+                      color={
+                        selectedLessonIds.includes(lesson._id)
+                          ? "primary"
+                          : "default"
+                      }
+                      variant={
+                        selectedLessonIds.includes(lesson._id)
+                          ? "filled"
+                          : "outlined"
+                      }
+                      onClick={() => toggleLesson(lesson._id)}
+                    />
+                  ))}
+              </Stack>
+
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mt: 1 }}
+              >
+                تم اختيار {selectedLessons.length} درس
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            disabled={chatMutation.isPending}
+            onClick={() => setOpenQuizDialog(false)}
+          >
+            إلغاء
+          </Button>
+
+          <Button
+            variant="contained"
+            disabled={chatMutation.isPending || selectedLessons.length === 0}
+            startIcon={
+              chatMutation.isPending ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                <AutoAwesomeIcon />
+              )
+            }
+            onClick={() => {
+              const prompt = `
+Generate a multiple-choice quiz based ONLY on the lesson content below.
+
+Requirements:
+- Generate ${quizSettings.questionsCount} questions.
+- Each question must have exactly 4 options.
+- Only one option is correct.
+- correctAnswer must exactly match one of the options.
+- Questions must be based ONLY on the lesson content.
+- Do not use information from outside the lesson content.
+- Use Arabic when the lesson is Arabic.
+- No explanations.
+- No markdown.
+- Return ONLY valid JSON.
+
+Return exactly this structure:
+
+{
+  "title": "(${selectedLessons.map((lesson) => lesson.title.split(" ").slice(0, 2)).join(" ")}) 'اختبار علي الدرس'",
+  "description": "اختبار لقياس فهم الطالب لمحتوى الدرس",
+  "order": 1,
+  "type": "quiz",
+  "isFree": false,
+  "questions": [
+    {
+      "question": "السؤال",
+      "options": [
+        "الخيار الأول",
+        "الخيار الثاني",
+        "الخيار الثالث",
+        "الخيار الرابع"
+      ],
+      "correctAnswer": "الخيار الأول"
+    }
+  ]
+}
+
+Lesson Content:
+${lessonContent}
+`;
+
+              console.log("prompt:", prompt);
+
+              chatMutation.mutate(prompt);
+              setOpenQuizDialog(false);
+            }}
+          >
+            {chatMutation.isPending
+              ? "جاري توليد الاختبار..."
+              : "توليد الاختبار"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
