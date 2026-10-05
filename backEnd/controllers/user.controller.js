@@ -24,8 +24,6 @@ const logInUser = asyncWrapper(async (req, res, next) => {
 
     const token = JwtToken({
         id: findUser._id,
-        firstName: findUser.firstName,
-        lastName: findUser.lastName,
         username: findUser.username,
         email: findUser.email,
         role: findUser.role,

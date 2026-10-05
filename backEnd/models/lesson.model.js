@@ -31,9 +31,6 @@ const lessonSchema = mongoose.Schema({
             },
         },
     ],
-    description: {
-        type: String
-    },
 
     order: {
         type: Number,
@@ -46,10 +43,6 @@ const lessonSchema = mongoose.Schema({
     },
     articleContent: {
         type: String
-    },
-    isFree: {
-        type: Boolean,
-        default: false
     },
 
     video: {

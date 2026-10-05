@@ -7,7 +7,7 @@ const lessonRouter = express.Router();
 lessonRouter.route("/:courseId")
     .get(gitLessons)
     .post(verifyToken, upload.single("video"), postLesson)
-lessonRouter.route("/:id")
+lessonRouter.route("/")
     .patch(verifyToken, patchLesson)
     .get(gitSingle)
     .delete(verifyToken, DeleteLesson)

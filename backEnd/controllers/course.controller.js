@@ -1,5 +1,7 @@
 const asyncWrapper = require("../middleware/asyncWrapper");
 const Courses = require("../models/courses.model");
+const Lesson = require("../models/lesson.model");
+const Progres = require("../models/Progres.model");
 const ErrorHandel = require("../utils/appError");
 const { SUCCESS, FAIL } = require("../utils/httpStatusText");
 
@@ -24,6 +26,7 @@ const gitSingle = asyncWrapper(async (req, res, next) => {
 // نسيت الاويت يا شاطر
 const postCourses = async (req, res) => {
     const course = new Courses({
+        instructor: req.user.username,
         userId: req.user.id,
         ...req.body,
         thumbnail: req.file?.path || req.body.thumbnail,
@@ -57,14 +60,25 @@ const patchCourses = async (req, res, next) => {
     res.send({ status: SUCCESS, data: { update } })
 }
 const DeleteCourses = async (req, res, next) => {
-    const { id } = req.params
+    const { id } = req.params;
+
     const deleteCourse = await Courses.findOneAndDelete({
         _id: id,
         userId: req.user.id,
-    })
+    });
+
     if (!deleteCourse) {
-        return next(ErrorHandel("not found course", 404))
+        return next(ErrorHandel("not found course", 404));
     }
-    res.send({ status: SUCCESS })
-}
+
+    await Lesson.deleteMany({
+        course: id,
+    });
+
+    await Progres.deleteMany({
+        courseId: id,
+    });
+
+    res.send({ status: SUCCESS });
+};
 module.exports = { gitCourses, gitSingle, postCourses, DeleteCourses, patchCourses, gitMyCourses }

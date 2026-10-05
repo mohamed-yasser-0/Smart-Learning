@@ -7,7 +7,6 @@ const router = express.Router();
 
 router.route("/")
     .get(gitCourses)
-    .get(gitMyCourses)
     .post(
         verifyToken,
         uploadImage.single("thumbnail"),

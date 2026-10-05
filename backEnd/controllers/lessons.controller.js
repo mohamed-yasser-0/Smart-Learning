@@ -5,6 +5,7 @@ const { SUCCESS, FAIL } = require("../utils/httpStatusText");
 const cloudinary = require("../config/cloudinary");
 const { fetchTranscript } = require("youtube-transcript");
 const Courses = require("../models/courses.model.js");
+const Progres = require("../models/Progres.model.js");
 
 const gitLessons = async (req, res) => {
     const { courseId } = req.params
@@ -102,12 +103,17 @@ const patchLesson = async (req, res) => {
     const update = await Lesson.findByIdAndUpdate(id, { ...req.body, lesson })
     res.send({ status: SUCCESS })
 }
-const DeleteLesson = async (req, res) => {
-    const { id } = req.params
-    const deleteCourse = await Lesson.findByIdAndDelete(id)
-    if (!deleteCourse) {
-        return next(ErrorHandel("not found lesson", 404))
+const DeleteLesson = async (req, res, next) => {
+    const { lessonId } = req.body;
+
+    const deleteLesson = await Lesson.findByIdAndDelete(lessonId);
+
+    if (!deleteLesson) {
+        return next(ErrorHandel("not found lesson", 404));
     }
-    res.send({ status: SUCCESS })
-}
+
+    await Progres.deleteMany({ lessonId });
+
+    res.send({ status: SUCCESS });
+};
 module.exports = { gitLessons, postLesson, gitSingle, DeleteLesson, patchLesson }
