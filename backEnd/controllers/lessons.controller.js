@@ -24,6 +24,7 @@ const gitSingle = asyncWrapper(async (req, res, next) => {
 
 const postLesson = asyncWrapper(async (req, res, next) => {
     const { courseId } = req.params;
+
     const course = await Courses.findById(courseId);
 
     if (!course) {
@@ -33,65 +34,106 @@ const postLesson = asyncWrapper(async (req, res, next) => {
     if (course.userId.toString() !== req.user.id.toString()) {
         return next(ErrorHandel("you are not the owner of this course", 403));
     }
+
     const lesson = new Lesson(req.body);
+
     lesson.course = courseId;
 
-
-
+    // Cloudinary video
     if (req.file) {
         const result = await cloudinary.api.resource(
             req.file.filename,
             {
                 resource_type: "video",
-                media_metadata: true
+                media_metadata: true,
             }
         );
 
         lesson.video = {
             url: req.file.path,
             provider: "cloudinary",
-            duration: result.duration
+            duration: result.duration,
         };
     }
-    if (lesson.video.provider === "youTube") {
+
+    // YouTube video
+    if (lesson.video?.provider === "youTube") {
         const { url } = lesson.video;
 
-        const videoId = new URL(url).pathname.split("/").pop();
+        const response = await fetch(
+            `https://getyoutubetranscript.com/api/v1/transcript?v=${encodeURIComponent(
+                url
+            )}&timestamps=true`,
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.YOUTUBE_TRANSCRIPT_API_KEY}`,
+                },
+            }
+        );
 
-        console.log("videoId:", videoId);
+        const data = await response.json();
 
-        const transcript = await fetchTranscript(videoId);
+        console.log("Transcript API:", data);
 
-        const text = transcript
-            .map((item) => {
-                if (typeof item.text === "string") {
-                    return item.text;
-                }
+        if (!response.ok || !data.success) {
+            console.error("Transcript API Error:", data);
 
-                return "";
-            })
-            .join(" ")
-            .replace(/\[موسيقى\]/g, "")
-            .replace(/\[object Object\]/g, "")
-            .replace(/->>/g, "")
-            .replace(/\s+/g, " ")
-            .trim();
+            return next(
+                ErrorHandel(
+                    data?.message || JSON.stringify(data),
+                    response.status || 500
+                )
+            );
+        }
 
-        const lastItem = transcript[transcript.length - 1];
-
-        const duration = lastItem
-            ? lastItem.offset + lastItem.duration
-            : 0;
-
-        const durationInSeconds = Math.floor(duration / 1000);
+        const text = data.data.transcript;
 
         lesson.video = {
             url,
             provider: lesson.video.provider,
-            duration: durationInSeconds,
-            text
+            duration: lesson.video.duration || 0,
+            text,
         };
     }
+    // if (lesson.video.provider === "youTube") {
+    //     const { url } = lesson.video;
+
+    //     const videoId = new URL(url).pathname.split("/").pop();
+
+    //     console.log("videoId:", videoId);
+
+    //     const transcript = await fetchTranscript(videoId);
+
+    //     const text = transcript
+    //         .map((item) => {
+    //             if (typeof item.text === "string") {
+    //                 return item.text;
+    //             }
+
+    //             return "";
+    //         })
+    //         .join(" ")
+    //         .replace(/\[موسيقى\]/g, "")
+    //         .replace(/\[object Object\]/g, "")
+    //         .replace(/->>/g, "")
+    //         .replace(/\s+/g, " ")
+    //         .trim();
+
+    //     const lastItem = transcript[transcript.length - 1];
+
+    //     const duration = lastItem
+    //         ? lastItem.offset + lastItem.duration
+    //         : 0;
+
+    //     const durationInSeconds = Math.floor(duration / 1000);
+
+    //     lesson.video = {
+    //         url,
+    //         provider: lesson.video.provider,
+    //         duration: durationInSeconds,
+    //         text
+    //     };
+    // }
     await lesson.save();
 
     res.status(201).send({
