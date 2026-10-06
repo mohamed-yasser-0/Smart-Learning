@@ -283,9 +283,12 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
               key={item.id}
               selected={selectedItem?.id === item.id}
               onClick={() => {
-                setsideBar(!sideBar)
                 setSelected(item.id);
                 navigate(item.path);
+
+                if (window.innerWidth < 900) {
+                  setsideBar(false);
+                }
               }}
               sx={{
                 borderRadius: "10px",
