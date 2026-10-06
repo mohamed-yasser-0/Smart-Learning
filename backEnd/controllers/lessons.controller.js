@@ -54,8 +54,14 @@ const postLesson = asyncWrapper(async (req, res, next) => {
         };
     }
     if (lesson.video.provider === "youTube") {
-        const { url } = lesson.video
-        const transcript = await fetchTranscript(url);
+        const { url } = lesson.video;
+
+        const videoId = new URL(url).pathname.split("/").pop();
+
+        console.log("videoId:", videoId);
+
+        const transcript = await fetchTranscript(videoId);
+
         const text = transcript
             .map((item) => {
                 if (typeof item.text === "string") {
@@ -71,7 +77,6 @@ const postLesson = asyncWrapper(async (req, res, next) => {
             .replace(/\s+/g, " ")
             .trim();
 
-        // Duration
         const lastItem = transcript[transcript.length - 1];
 
         const duration = lastItem
@@ -79,11 +84,12 @@ const postLesson = asyncWrapper(async (req, res, next) => {
             : 0;
 
         const durationInSeconds = Math.floor(duration / 1000);
+
         lesson.video = {
             url,
             provider: lesson.video.provider,
             duration: durationInSeconds,
-            text: text
+            text
         };
     }
     await lesson.save();

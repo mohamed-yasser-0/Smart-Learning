@@ -29,15 +29,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 // Exact data from the image
-const weeklyData = [
-  { day: "Mon", hours: 48 },
-  { day: "Tue", hours: 90 },
-  { day: "Wed", hours: 32 },
-  { day: "Thu", hours: 120 },
-  { day: "Fri", hours: 75 },
-  { day: "Sat", hours: 60 },
-  { day: "Sun", hours: 105 },
-];
+const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const subjects = [
   { name: "AI", value: 78, color: "#7C4DFF" },
@@ -226,7 +218,6 @@ export default function Home() {
 
   const courses = CourseData?.data?.course;
 
-  console.log("courses:", courses);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["progress"],
@@ -242,34 +233,42 @@ export default function Home() {
       return res.data;
     },
   });
-
-  console.log(data?.data?.progres);
-  const day = data?.data?.progres.map((e) => ({
-    day: new Date(e?.createdAt).toLocaleDateString("en-US", {
-      weekday: "short",
-    }),
-    hours: e?.duration,
-  }));
-
   const progress = data?.data?.progres;
+
   const sub = progress?.reduce((acc, e) => acc + e.duration, 0);
+
+  const weeklyData = progress?.reduce((acc, current) => {
+    const duration = current.duration;
+
+    const currentDate = new Date(current.createdAt).toISOString().split("T")[0];
+
+    const exists = acc.find((item) => item.day === currentDate);
+
+    if (exists) {
+      exists.hours += Math.round(duration / 60);
+    } else {
+      acc.push({
+        day: currentDate,
+        hours: Math.round(duration / 60),
+      });
+    }
+
+    return acc;
+  }, []);
   // if (isError) return <p>حصل خطأ: {error.message}</p>;
-  const score = data?.data?.progres?.reduce(
+  const score = progress?.reduce(
     (total, score) => total + (score?.quizScore[2] || 0),
     0,
   );
-  const quiz =
-    data?.data?.progres?.filter((e) => e?.quizScore?.length > 0) || [];
+  const quiz = progress?.filter((e) => e?.quizScore?.length > 0) || [];
 
-  const lessons =
-    data?.data?.progres?.filter((e) => !e?.quizScore?.length) || [];
+  const lessons = progress?.filter((e) => !e?.quizScore?.length) || [];
 
   const courseIds = [...new Set(progress?.map((item) => item.courseId))];
 
   const continueLearning = courses
     ?.filter((course) => courseIds.includes(course._id))
     .slice(0, 3);
-  console.log("connnnsssssss", continueLearning);
   return (
     <Box
       sx={{
@@ -335,7 +334,7 @@ export default function Home() {
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             icon={<AccessTime sx={{ fontSize: 22 }} />}
-            value={`${Math.round(sub / 60) ?? 0} hrs`}
+            value={`${Math.round(sub / 60) || 0} hrs`}
             label="Hours Learned"
             iconBg="#3F51B5"
           />
@@ -398,7 +397,7 @@ export default function Home() {
               <Box sx={{ height: 200 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
-                    data={day}
+                    data={weeklyData}
                     margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                   >
                     <defs>
@@ -551,9 +550,9 @@ export default function Home() {
         {continueLearning?.map((item) => (
           <Grid size={{ xs: 12, md: 4 }} key={item.title}>
             <Card
-            onClick={() => {
-              window.location.href = `/courses/${item._id}`;
-            }}
+              onClick={() => {
+                window.location.href = `/courses/${item._id}`;
+              }}
               sx={{
                 bgcolor: "backgorund.paper",
                 borderRadius: "16px",

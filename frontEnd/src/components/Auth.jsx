@@ -62,9 +62,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [ConfirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [userName, setUserName] = useState("");
   const navigate = useNavigate();
 
@@ -124,8 +121,6 @@ export default function LoginPage() {
     e.preventDefault();
     RegisterMutation.mutate({
       username: userName,
-      firstName: firstName,
-      lastName: lastName,
       email: email,
       password: password,
     });
@@ -359,96 +354,6 @@ export default function LoginPage() {
               }}
             />
           </Tabs>
-          {/* First Name */}
-          {tab === 1 && (
-            <>
-              <Typography
-                sx={{
-                  color: "text.primary",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  mb: 1,
-                }}
-              >
-                First Name
-              </Typography>
-              <TextField
-                fullWidth
-                placeholder="Alex Johnson"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                sx={{
-                  mb: 2.5,
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "divider",
-                    borderRadius: "10px",
-                    color: "text.primary",
-                    "& fieldset": { borderColor: "action.selected" },
-                    "&:hover fieldset": { borderColor: "primary.main" },
-                    "&.Mui-focused fieldset": { borderColor: "primary.main" },
-                  },
-                  "& input::placeholder": {
-                    color: "text.secondary",
-                    opacity: 1,
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <MailIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </>
-          )}
-          {/* last Name */}
-          {tab === 1 && (
-            <>
-              <Typography
-                sx={{
-                  color: "text.primary",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  mb: 1,
-                }}
-              >
-                Last Name
-              </Typography>
-              <TextField
-                fullWidth
-                placeholder="Alex Johnson"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                sx={{
-                  mb: 2.5,
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "divider",
-                    borderRadius: "10px",
-                    color: "text.primary",
-                    "& fieldset": { borderColor: "action.selected" },
-                    "&:hover fieldset": { borderColor: "primary.main" },
-                    "&.Mui-focused fieldset": { borderColor: "primary.main" },
-                  },
-                  "& input::placeholder": {
-                    color: "text.secondary",
-                    opacity: 1,
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <MailIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </>
-          )}
           {/* username */}
           {tab === 1 && (
             <>

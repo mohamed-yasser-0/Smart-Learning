@@ -110,10 +110,6 @@ export default function UploadLesson() {
   const [quizSettings, setQuizSettings] = useState({
     questionsCount: 5,
   });
-  // console.log("selectedLessonIds:", selectedLessonIds);
-  // console.log("selectedLessons:", selectedLessons);
-  // console.log("lessonTexts:", lessonTexts);
-  // console.log("lessonContent:", lessonContent);
 
   const chatMutation = useMutation({
     mutationFn: async (summary) => {
@@ -130,7 +126,6 @@ export default function UploadLesson() {
           },
         },
       );
-      console.log("AI response:", res.data);
       return res.data;
     },
 
@@ -175,7 +170,6 @@ export default function UploadLesson() {
       }
     },
   });
-  console.log("Quiz generated successfully:", formData);
 
   const LessonMutation = useMutation({
     mutationFn: async (payload) => {
@@ -512,37 +506,7 @@ export default function UploadLesson() {
                 sx={fieldSx}
               />
 
-              <TextField
-                fullWidth
-                multiline
-                minRows={3}
-                label={`وصف ال${typeLabel}`}
-                placeholder="اشرح المحتوى بإيجاز"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                sx={fieldSx}
-              />
-
               <Stack direction="row" spacing={2}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="ترتيب الدرس"
-                  value={formData.order}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      order: Number(e.target.value),
-                    }))
-                  }
-                  sx={fieldSx}
-                />
-
                 <FormControl fullWidth sx={fieldSx}>
                   <InputLabel>نوع الدرس</InputLabel>
                   <Select
@@ -557,22 +521,20 @@ export default function UploadLesson() {
                     <MenuItem value="quiz">Quiz</MenuItem>
                   </Select>
                 </FormControl>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="ترتيب الدرس"
+                  value={formData.order}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      order: Number(e.target.value),
+                    }))
+                  }
+                  sx={fieldSx}
+                />
               </Stack>
-
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.isFree}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        isFree: e.target.checked,
-                      }))
-                    }
-                  />
-                }
-                label="درس مجاني"
-              />
             </Stack>
           </Box>
 
@@ -1181,10 +1143,8 @@ Return exactly this structure:
 
 {
   "title": "اختبار الدرس",
-  "description": "اختبار لقياس فهم الطالب لمحتوى الدرس",
   "order": 1,
   "type": "quiz",
-  "isFree": false,
   "questions": [
     {
       "question": "السؤال",
@@ -1219,10 +1179,8 @@ Return exactly this structure:
 
 {
   "title": "عنوان المقال",
-  "description": "وصف المقال",
   "order": 1,
   "type": "article",
-  "isFree": false,
   "articleContent": "محتوى المقال"
 }
 

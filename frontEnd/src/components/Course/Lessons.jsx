@@ -253,7 +253,7 @@ export default function CourseLessons() {
 
     queryFn: async () => {
       const res = await axios.get(
-        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses",
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses/mycourses",
         {
           headers: {
             Authorization: `Bearer ${token}`,
