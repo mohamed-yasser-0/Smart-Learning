@@ -4,6 +4,11 @@ const Users = require("../models/users.model");
 const ErrorHandel = require("../utils/appError");
 const { SUCCESS } = require("../utils/httpStatusText");
 const bcrypt = require('bcrypt');
+const { OAuth2Client } = require("google-auth-library");
+
+const googleClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID
+);
 
 const getUsers = async (req, res) => {
     const users = await Users.find({}, { __v: false });
@@ -15,9 +20,12 @@ const logInUser = asyncWrapper(async (req, res, next) => {
     if (!findUser) {
         return next(ErrorHandel("Invalid email or password", 401))
     }
-    const hash = findUser.password
+    if (!findUser.password) {
+        return next(ErrorHandel("Invalid email or password", 401));
+    }
 
-    const isMatch = await bcrypt.compare(password, hash)
+    const isMatch = await bcrypt.compare(password, findUser.password);
+
     if (!isMatch) {
         return next(ErrorHandel("Invalid email or password", 401));
     }
@@ -30,7 +38,81 @@ const logInUser = asyncWrapper(async (req, res, next) => {
         avatar: findUser.avatar,
     }); res.send({ token })
 });
+const googleLogin = asyncWrapper(async (req, res, next) => {
+    const { credential } = req.body;
 
+    if (!credential) {
+        return next(ErrorHandel("Google credential is required", 400));
+    }
+
+    let ticket;
+
+    try {
+        ticket = await googleClient.verifyIdToken({
+            idToken: credential,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+    } catch (error) {
+        return next(ErrorHandel("Invalid Google credential", 401));
+    }
+
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.sub || !payload.email || payload.email_verified !== true) {
+        return next(ErrorHandel("Invalid Google account", 401));
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email.toLowerCase();
+    const username = email.split("@")[0];
+
+    let user = await Users.findOne({ googleId });
+
+    if (!user) {
+        user = await Users.findOne({ email });
+
+        if (user) {
+            if (user.authProvider !== "google") {
+                return next(
+                    ErrorHandel(
+                        "This email is already registered. Please log in using your existing method.",
+                        409
+                    )
+                );
+            }
+
+            user.googleId = googleId;
+            await user.save();
+        } else {
+            let uniqueUsername = username;
+            let counter = 1;
+
+            while (await Users.exists({ username: uniqueUsername })) {
+                uniqueUsername = `${username}${counter}`;
+                counter++;
+            }
+
+            user = await Users.create({
+                username: uniqueUsername,
+                email,
+                googleId,
+                authProvider: "google",
+                avatar: payload.picture || "",
+                role: "user",
+            });
+        }
+    }
+
+    const token = JwtToken({
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+    });
+
+    res.status(200).json({ token });
+});
 const registerUser = asyncWrapper(async (req, res, next) => {
     const { password, email, username } = req.body;
     const findemail = await Users.findOne({ email })
@@ -52,4 +134,4 @@ const registerUser = asyncWrapper(async (req, res, next) => {
         message: "User created successfully",
     });
 });
-module.exports = { getUsers, logInUser, registerUser }
+module.exports = { getUsers, logInUser, registerUser, googleLogin }

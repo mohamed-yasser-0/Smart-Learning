@@ -17,7 +17,7 @@ import {
   Paper,
   CircularProgress,
 } from "@mui/material";
-
+import { GoogleLogin } from "@react-oauth/google";
 // ------------------------------------------------------------------
 // Color tokens taken from the design
 // ------------------------------------------------------------------
@@ -97,6 +97,34 @@ export default function LoginPage() {
       password: password,
     });
   };
+  const googleLoginMutation = useMutation({
+    mutationFn: async (credential) => {
+      const res = await axios.post(
+        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/user/google-login",
+        { credential },
+      );
+
+      return res.data;
+    },
+
+    onSuccess: (data) => {
+      if (data?.token) {
+        localStorage.setItem("token", data.token);
+
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+
+        toast.success("Logged in successfully");
+
+        navigate("/dashboard");
+      }
+    },
+
+    onError: (error) => {
+      toast.error(error.response?.data?.message || "Google login failed");
+
+      console.error(error);
+    },
+  });
   const RegisterMutation = useMutation({
     mutationFn: async (userData) => {
       const res = await axios.post(
@@ -531,6 +559,28 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+          <Stack spacing={2} alignItems="center" sx={{ mt: 3 }}>
+            <Typography
+              sx={{
+                color: "text.secondary",
+                fontSize: 13,
+              }}
+            >
+              Or continue with
+            </Typography>
+
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                if (credentialResponse.credential) {
+                  googleLoginMutation.mutate(credentialResponse.credential);
+                }
+              }}
+              onError={() => {
+                toast.error("Google login failed");
+              }}
+              useOneTap={false}
+            />
+          </Stack>
           {/* Register link */}
           <Typography
             sx={{

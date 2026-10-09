@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
+    "@react-oauth/google": "^0.13.5",
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.19.0",
     "cloudinary": "^1.41.3",
