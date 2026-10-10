@@ -382,6 +382,28 @@ export default function LoginPage() {
               }}
             />
           </Tabs>
+          <Stack spacing={2} alignItems="center" sx={{mb:3 }}>
+            <Typography
+              sx={{
+                color: "text.secondary",
+                fontSize: 13,
+              }}
+            >
+              continue with
+            </Typography>
+
+            <GoogleLogin
+              onSuccess={(credentialResponse) => {
+                if (credentialResponse.credential) {
+                  googleLoginMutation.mutate(credentialResponse.credential);
+                }
+              }}
+              onError={() => {
+                toast.error("Google login failed");
+              }}
+              useOneTap={false}
+            />
+          </Stack>
           {/* username */}
           {tab === 1 && (
             <>
@@ -427,6 +449,7 @@ export default function LoginPage() {
               />
             </>
           )}
+
           {/* Email */}
           <Typography
             sx={{
@@ -559,28 +582,6 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-          <Stack spacing={2} alignItems="center" sx={{ mt: 3 }}>
-            <Typography
-              sx={{
-                color: "text.secondary",
-                fontSize: 13,
-              }}
-            >
-              Or continue with
-            </Typography>
-
-            <GoogleLogin
-              onSuccess={(credentialResponse) => {
-                if (credentialResponse.credential) {
-                  googleLoginMutation.mutate(credentialResponse.credential);
-                }
-              }}
-              onError={() => {
-                toast.error("Google login failed");
-              }}
-              useOneTap={false}
-            />
-          </Stack>
           {/* Register link */}
           <Typography
             sx={{
