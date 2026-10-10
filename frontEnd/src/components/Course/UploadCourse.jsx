@@ -1,29 +1,25 @@
 import React, { useEffect, useState } from "react";
 import {
   Box,
-  Typography,
-  TextField,
-  MenuItem,
-  Select,
-  InputLabel,
-  FormControl,
-  Stack,
   Button,
-  IconButton,
-  Divider,
   CircularProgress,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
 } from "@mui/material";
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import CloudUploadRounded from "@mui/icons-material/CloudUploadRounded";
-import SaveOutlined from "@mui/icons-material/SaveOutlined";
 import RocketLaunchRounded from "@mui/icons-material/RocketLaunchRounded";
-import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
-import { FormControlLabel, Switch } from "@mui/material";
-const categories = ["Data Science", "Frontend", "Backend", "Design"];
-const levels = ["Beginner", "Intermediate", "Advanced"];
+import { api } from "../../api/client";
+
+const MAX_IMAGE_MB = 5;
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -37,54 +33,55 @@ const fieldSx = {
   "& .MuiOutlinedInput-input": { color: "text.primary" },
 };
 
-export default function UploadCourse({ activeCourse }) {
-  const [form, setFormData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    level: "",
-    instructor: "",
-    price: 0,
-    status: "draft",
-    thumbnailPreview: null,
+// الـ instructor ممكن يرجع string أو object ({ name, image }) حسب الـ backend
+const getInstructorName = (instructor) =>
+  typeof instructor === "string" ? instructor : (instructor?.name ?? "");
+
+export default function UploadCourse({ activeCourse, onClose }) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const isEdit = Boolean(activeCourse);
+
+  const [form, setForm] = useState({
+    title: activeCourse?.title ?? "",
+    description: activeCourse?.description ?? "",
+    category: activeCourse?.category ?? "",
+    level: activeCourse?.level ?? "",
+    instructor: getInstructorName(activeCourse?.instructor),
+    price: activeCourse?.price ?? 0,
+    status: activeCourse?.status ?? "draft",
   });
 
-  useEffect(() => {
-    if (activeCourse) {
-      setFormData({
-        title: activeCourse.title,
-        description: activeCourse.description,
-        category: activeCourse.category,
-        level: activeCourse.level,
-        instructor: activeCourse.instructor,
-        price: activeCourse.price,
-        status: activeCourse.status,
-        thumbnailPreview: activeCourse.thumbnail,
-      });
-    }
-  }, [activeCourse]);
+  // الملف الحقيقي (للرفع) منفصل عن رابط المعاينة (للعرض بس)
   const [thumbnailFile, setThumbnailFile] = useState(null);
-  // ✅ نفصل الملف الحقيقي (للرفع) عن رابط المعاينة (للعرض بس)
-  const navigate = useNavigate();
-  const patch = activeCourse ? "patch" : "post"; // لو فيه كورس نشوف لو بنعدل ولا بنضيف
-  const CourseMutation = useMutation({
-    mutationFn: async (formData) => {
-      const token = localStorage.getItem("token");
-      const res = await axios[patch](
-        `https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/courses/${activeCourse ? activeCourse._id : ""}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
+  const [previewUrl, setPreviewUrl] = useState(activeCourse?.thumbnail ?? null);
+
+  useEffect(() => {
+    if (!thumbnailFile) return;
+    const url = URL.createObjectURL(thumbnailFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url); // تنضيف الذاكرة
+  }, [thumbnailFile]);
+
+  const setField = (field, value) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  // لو الصفحة مفتوحة جوه CourseLibrary بنقفلها بـ onClose، غير كده بنرجع لـ /courses
+  const close = () => (onClose ? onClose() : navigate("/courses"));
+
+  const courseMutation = useMutation({
+    mutationFn: async (body) => {
+      const res = await api.request({
+        method: isEdit ? "patch" : "post",
+        url: `/api/courses/${isEdit ? activeCourse._id : ""}`,
+        data: body, // FormData: axios بيظبط الـ multipart boundary لوحده
+      });
       return res.data;
     },
     onSuccess: () => {
-      toast.success("تم رفع الكورس بنجاح");
-      navigate("/courses");
+      toast.success(isEdit ? "تم حفظ التعديلات" : "تم رفع الكورس بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["courses"] });
+      close();
     },
     onError: (error) => {
       if (error.response?.data?.message === "jwt expired") {
@@ -97,139 +94,96 @@ export default function UploadCourse({ activeCourse }) {
     },
   });
 
-  const courseHandleSubmit = (e) => {
+  const handleThumbnail = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // عشان نقدر نختار نفس الملف تاني
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("اختار ملف صورة فقط");
+      return;
+    }
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      toast.error(`حجم الصورة لازم يكون أقل من ${MAX_IMAGE_MB}MB`);
+      return;
+    }
+    setThumbnailFile(file);
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.title || !form.description) {
+    if (!form.title.trim() || !form.description.trim()) {
       toast.error("اكمل الحقول الأساسية الأول");
       return;
     }
-    const formData = new FormData();
 
-    formData.append("title", form.title);
-    formData.append("description", form.description);
-    formData.append("instructor", form.instructor);
-    formData.append("category", form.category);
-    formData.append("level", form.level);
-    formData.append("price", form.price);
-    formData.append("status", form.status);
-    if (activeCourse) {
-      formData.append("thumbnail", form.thumbnailPreview);
-    }
-    // ✅ بنبعت الملف الحقيقي مش رابط المعاينة
+    const body = new FormData();
+    body.append("title", form.title.trim());
+    body.append("description", form.description.trim());
+    body.append("instructor", form.instructor.trim());
+    body.append("price", form.price);
+    body.append("status", form.status);
+    // القيم الفاضية مش بتتبعت عشان ما تكسرش validation الـ enum في الـ backend
+    if (form.category) body.append("category", form.category);
+    if (form.level) body.append("level", form.level);
+
+    // الصورة: ملف جديد لو اتغيرت، وإلا الرابط القديم عند التعديل (مش الاتنين مع بعض)
     if (thumbnailFile) {
-      formData.append("thumbnail", thumbnailFile);
+      body.append("thumbnail", thumbnailFile);
+    } else if (isEdit && activeCourse.thumbnail) {
+      body.append("thumbnail", activeCourse.thumbnail);
     }
 
-    CourseMutation.mutate(formData);
+    courseMutation.mutate(body);
   };
-  const handleThumbnail = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setThumbnailFile(file); // ده اللي هيتبعت للسيرفر
-      setFormData({ ...form, thumbnailPreview: URL.createObjectURL(file) }); // ده للعرض بس
-    }
-  };
+
+  const checklist = [
+    {
+      label: "عنوان ووصف الكورس",
+      done: !!form.title.trim() && !!form.description.trim(),
+    },
+    { label: "صورة الغلاف", done: !!previewUrl },
+    { label: "اسم المدرب", done: !!form.instructor.trim() },
+  ];
 
   return (
     <Box
       component="form"
-      onSubmit={courseHandleSubmit}
+      onSubmit={handleSubmit}
       sx={{
         minHeight: "100vh",
         bgcolor: "background.default",
         color: "text.primary",
-        fontFamily: "'Inter', system-ui, sans-serif",
         p: { xs: 2, md: 4 },
       }}
     >
       {/* Top bar */}
-      <Stack
-        direction="row"
-        sx={{
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 3,
-          flexWrap: "wrap",
-        }}
-      >
-        <Stack direction="row" sx={{ alignItems: "center" }} spacing={1.5}>
-          <IconButton
-            onClick={() => navigate("/courses")}
-            size="small"
-            sx={{
-              bgcolor: "background.paper",
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: "10px",
-              color: "text.secondary",
-              "&:hover": { bgcolor: "action.hover" },
-            }}
-          >
-            <ArrowBackRounded fontSize="small" />
-          </IconButton>
-          <Box>
-            <Typography
-              sx={{ fontSize: 20, fontWeight: 700, color: "text.primary" }}
-            >
-              {activeCourse ? "تعديل الكورس" : "رفع كورس جديد"}
-            </Typography>
-            <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-              اكتب معلومات الكورس بعدين
-              {activeCourse ? " اضغط حفظ" : " اضغط نشر"}
-            </Typography>
-          </Box>
-        </Stack>
-        {/* 
-        <Stack
-          direction="row"
-          spacing={1.5}
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 3 }}>
+        <IconButton
+          aria-label="رجوع"
+          onClick={close}
+          size="small"
           sx={{
-            mt: { xs: 2, md: 0 },
-            justifyContent: "center",
-            alignItems: "center",
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: "10px",
+            color: "text.secondary",
+            "&:hover": { bgcolor: "action.hover" },
           }}
         >
-          <Button
-            type="button"
-            variant="outlined"
-            startIcon={<SaveOutlined fontSize="small" />}
-            sx={{
-              borderColor: "divider",
-              color: "text.secondary",
-              textTransform: "none",
-              borderRadius: "10px",
-              px: 2.5,
-              "&:hover": {
-                borderColor: "primary.main",
-                bgcolor: "action.hover",
-              },
-            }}
-          >
-            حفظ كمسودة
-          </Button>
-
-          <Button
-            type="submit"
-            disabled={CourseMutation.isPending}
-            variant="contained"
-            color="primary"
-            startIcon={
-              CourseMutation.isPending ? (
-                <CircularProgress size={18} color="inherit" />
-              ) : (
-                <RocketLaunchRounded fontSize="small" />
-              )
-            }
-            sx={{
-              textTransform: "none",
-              borderRadius: "10px",
-              px: 3,
-              fontWeight: 600,
-            }}
-          >
-            {CourseMutation.isPending ? "جاري النشر..." : "نشر الكورس"}
-          </Button>
-        </Stack> */}
+          <ArrowBackRounded fontSize="small" />
+        </IconButton>
+        <Box>
+          <Typography sx={{ fontSize: 20, fontWeight: 700 }}>
+            {isEdit ? "تعديل الكورس" : "رفع كورس جديد"}
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+            {isEdit
+              ? "اكتب معلومات الكورس بعدين اضغط حفظ"
+              : "اكتب معلومات الكورس بعدين اضغط نشر"}
+          </Typography>
+        </Box>
       </Stack>
 
       <Box
@@ -251,14 +205,7 @@ export default function UploadCourse({ activeCourse }) {
               mb: 3,
             }}
           >
-            <Typography
-              sx={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "text.primary",
-                mb: 2.5,
-              }}
-            >
+            <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 2.5 }}>
               المعلومات الأساسية
             </Typography>
 
@@ -268,9 +215,7 @@ export default function UploadCourse({ activeCourse }) {
                 label="عنوان الكورس"
                 placeholder="مثال: React & TypeScript Mastery"
                 value={form.title}
-                onChange={(e) =>
-                  setFormData({ ...form, title: e.target.value })
-                }
+                onChange={(e) => setField("title", e.target.value)}
                 sx={fieldSx}
               />
 
@@ -281,67 +226,30 @@ export default function UploadCourse({ activeCourse }) {
                 label="وصف الكورس"
                 placeholder="اشرح باختصار محتوى الكورس والمهارات اللي هيتعلمها الطالب"
                 value={form.description}
-                onChange={(e) =>
-                  setFormData({ ...form, description: e.target.value })
-                }
+                onChange={(e) => setField("description", e.target.value)}
                 sx={fieldSx}
               />
 
-              <Stack direction="row" spacing={2}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={form.status === "published"}
-                      onChange={(e) =>
-                        setFormData({
-                          ...form,
-                          status: e.target.checked ? "published" : "draft",
-                        })
-                      }
-                    />
-                  }
-                  label={form.publish ? "منشور" : "غير منشور"}
-                />
-                {/* <FormControl fullWidth sx={fieldSx}>
-                  <InputLabel>المستوى</InputLabel>
-                  <Select
-                    value={form.level}
-                    label="المستوى"
-                    onChange={(e) =>
-                      setFormData({ ...form, level: e.target.value })
-                    }
-                  >
-                    {levels.map((l) => (
-                      <MenuItem key={l} value={l}>
-                        {l}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl> */}
-              </Stack>
+              <TextField
+                fullWidth
+                label="اسم المدرب"
+                placeholder="مثال: Ahmed Ali"
+                value={form.instructor}
+                onChange={(e) => setField("instructor", e.target.value)}
+                sx={fieldSx}
+              />
 
-              <Stack direction="row" spacing={2}>
-                <TextField
-                  fullWidth
-                  label="اسم المدرب"
-                  placeholder="مثال: Ahmed Ali"
-                  value={form.instructor}
-                  onChange={(e) =>
-                    setFormData({ ...form, instructor: e.target.value })
-                  }
-                  sx={fieldSx}
-                />
-                {/* <TextField
-                  fullWidth
-                  type="number"
-                  label="السعر"
-                  value={form.price}
-                  onChange={(e) =>
-                    setFormData({ ...form, price: Number(e.target.value) })
-                  }
-                  sx={fieldSx}
-                /> */}
-              </Stack>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={form.status === "published"}
+                    onChange={(e) =>
+                      setField("status", e.target.checked ? "published" : "draft")
+                    }
+                  />
+                }
+                label={form.status === "published" ? "منشور" : "غير منشور"}
+              />
             </Stack>
           </Box>
         </Box>
@@ -359,14 +267,7 @@ export default function UploadCourse({ activeCourse }) {
               mb: 3,
             }}
           >
-            <Typography
-              sx={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "text.primary",
-                mb: 1.5,
-              }}
-            >
+            <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 1.5 }}>
               صورة الغلاف
             </Typography>
 
@@ -385,9 +286,7 @@ export default function UploadCourse({ activeCourse }) {
                 bgcolor: "background.default",
                 cursor: "pointer",
                 overflow: "hidden",
-                backgroundImage: form.thumbnailPreview
-                  ? `url(${form.thumbnailPreview})`
-                  : "none",
+                backgroundImage: previewUrl ? `url(${previewUrl})` : "none",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
                 "&:hover": { borderColor: "primary.main" },
@@ -399,7 +298,7 @@ export default function UploadCourse({ activeCourse }) {
                 hidden
                 onChange={handleThumbnail}
               />
-              {!form.thumbnailPreview && (
+              {!previewUrl && (
                 <>
                   <CloudUploadRounded
                     sx={{ fontSize: 30, color: "text.disabled" }}
@@ -412,7 +311,7 @@ export default function UploadCourse({ activeCourse }) {
             </Box>
           </Box>
 
-          {/* Publish checklist */}
+          {/* Checklist + submit */}
           <Box
             sx={{
               bgcolor: "background.paper",
@@ -422,30 +321,12 @@ export default function UploadCourse({ activeCourse }) {
               p: 2.5,
             }}
           >
-            <Typography
-              sx={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "text.primary",
-                mb: 1.5,
-              }}
-            >
-              {activeCourse ? " احفظ التعديلات" : " تأكد من إكمال الخطوات"}
+            <Typography sx={{ fontSize: 15, fontWeight: 700, mb: 1.5 }}>
+              {isEdit ? "احفظ التعديلات" : "تأكد من إكمال الخطوات"}
             </Typography>
+
             <Stack spacing={1}>
-              {[
-                {
-                  label: "عنوان ووصف الكورس",
-                  done: !!form.title && !!form.description,
-                },
-                // {
-                //   label: "التصنيف والمستوى",
-                //   done: !!form.category && !!form.level,
-                // },
-                { label: "صورة الغلاف", done: !!form.thumbnailPreview },
-                { label: " منشور", done: form.status === "published" },
-                { label: "اسم المدرب", done: !!form.instructor },
-              ].map((item) => (
+              {checklist.map((item) => (
                 <Stack
                   key={item.label}
                   direction="row"
@@ -476,12 +357,11 @@ export default function UploadCourse({ activeCourse }) {
 
             <Button
               type="submit"
-              disabled={CourseMutation.isPending}
+              disabled={courseMutation.isPending}
               fullWidth
               variant="contained"
-              color="primary"
               startIcon={
-                CourseMutation.isPending ? (
+                courseMutation.isPending ? (
                   <CircularProgress size={18} color="inherit" />
                 ) : (
                   <RocketLaunchRounded fontSize="small" />
@@ -494,9 +374,11 @@ export default function UploadCourse({ activeCourse }) {
                 py: 1.1,
               }}
             >
-              {CourseMutation.isPending
-                ? "جاري النشر..."
-                : activeCourse
+              {courseMutation.isPending
+                ? isEdit
+                  ? "جاري الحفظ..."
+                  : "جاري النشر..."
+                : isEdit
                   ? "حفظ التعديلات"
                   : "نشر الكورس"}
             </Button>

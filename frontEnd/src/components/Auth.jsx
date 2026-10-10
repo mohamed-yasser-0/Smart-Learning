@@ -1,341 +1,399 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { useMutation } from "@tanstack/react-query";
+import { GoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
 import {
-  Box,
-  Stack,
-  Typography,
-  TextField,
-  InputAdornment,
-  IconButton,
-  Button,
   Avatar,
-  Tabs,
-  Tab,
+  Box,
+  Button,
+  CircularProgress,
+  IconButton,
+  InputAdornment,
   Link,
   Paper,
-  CircularProgress,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
 } from "@mui/material";
-import { GoogleLogin } from "@react-oauth/google";
-// ------------------------------------------------------------------
-// Color tokens taken from the design
-// ------------------------------------------------------------------
-
+import SchoolIcon from "@mui/icons-material/School";
+import LockIcon from "@mui/icons-material/Lock";
 import MailIcon from "@mui/icons-material/Mail";
+import PersonIcon from "@mui/icons-material/Person";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import PsychologyIcon from "@mui/icons-material/Psychology";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import { api } from "../api/client";
 
-import {
-  School as SchoolIcon,
-  LockOutlined as LockIcon,
-  Visibility,
-  VisibilityOff,
-  MenuBook as MenuBookIcon,
-  Psychology as PsychologyIcon,
-  TrendingUp as TrendingUpIcon,
-  ArrowForward as ArrowForwardIcon,
-  // HelpOutline as HelpOutlineIcon,
-} from "@mui/icons-material";
-import toast from "react-hot-toast";
-
-const features = [
+// ---------------------------------------------------------------------------
+// Static data & helpers
+// ---------------------------------------------------------------------------
+const FEATURES = [
   {
-    icon: <MenuBookIcon fontSize="18" />,
-    label: "200+ Courses",
-    bg: "rgba(99, 102, 241, 0.133);",
-    cr: "rgb(99, 102, 241)",
+    icon: <MenuBookIcon sx={{ fontSize: 18 }} />,
+    label: "Rich Course Library",
+    bg: "rgba(99, 102, 241, 0.133)",
+    color: "rgb(99, 102, 241)",
   },
   {
-    icon: <PsychologyIcon fontSize="18" />,
+    icon: <PsychologyIcon sx={{ fontSize: 18 }} />,
     label: "AI-Powered Quizzes",
-    bg: "#1f4a4a",
-    cr: "rgb(34, 211, 238)",
+    bg: "rgba(34, 211, 238, 0.133)",
+    color: "rgb(34, 211, 238)",
   },
   {
-    icon: <TrendingUpIcon fontSize="18" />,
-    label: "Progress Analytics",
+    icon: <TrendingUpIcon sx={{ fontSize: 18 }} />,
+    label: "Progress Tracking",
     bg: "rgba(52, 211, 153, 0.133)",
-    cr: "#6366f1",
+    color: "rgb(52, 211, 153)",
   },
 ];
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
+
+const getErrorMessage = (error, fallback) =>
+  error.response?.data?.message || fallback;
+
+const fieldSx = {
+  "& .MuiOutlinedInput-root": {
+    bgcolor: "divider",
+    borderRadius: "10px",
+    color: "text.primary",
+    "& fieldset": { borderColor: "action.hover" },
+    "&:hover fieldset": { borderColor: "primary.main" },
+    "&.Mui-focused fieldset": { borderColor: "primary.main" },
+  },
+  "& input::placeholder": { color: "text.secondary", opacity: 1 },
+};
+
+const tabSx = {
+  minHeight: 36,
+  borderRadius: "8px",
+  fontWeight: 700,
+  fontSize: 14,
+  textTransform: "none",
+  transition: "all .2s",
+  color: "text.secondary",
+  "&.Mui-selected": {
+    color: "primary.contrastText",
+    bgcolor: "primary.dark",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Reusable pieces
+// ---------------------------------------------------------------------------
+function FormField({ id, label, icon, endAdornment, ...textFieldProps }) {
+  return (
+    <Box sx={{ mb: 2.5 }}>
+      <Typography
+        component="label"
+        htmlFor={id}
+        sx={{
+          display: "block",
+          color: "text.primary",
+          fontSize: 13.5,
+          fontWeight: 600,
+          mb: 1,
+        }}
+      >
+        {label}
+      </Typography>
+      <TextField
+        fullWidth
+        id={id}
+        sx={fieldSx}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">{icon}</InputAdornment>
+            ),
+            endAdornment,
+          },
+        }}
+        {...textFieldProps}
+      />
+    </Box>
+  );
+}
+
+function BrandPanel() {
+  return (
+    <Box
+      sx={{
+        flex: "0 0 45%",
+        display: { xs: "none", md: "flex" },
+        flexDirection: "column",
+        justifyContent: "space-between",
+        bgcolor: "background.paper",
+        borderRight: "1px solid rgba(255,255,255,0.08)",
+        p: { md: 6, lg: 7 },
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Logo */}
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+        <Avatar
+          variant="rounded"
+          sx={{
+            bgcolor: "primary.light",
+            width: 44,
+            height: 44,
+            borderRadius: "17px",
+          }}
+        >
+          <SchoolIcon sx={{ fontSize: 24 }} />
+        </Avatar>
+        <Box>
+          <Typography
+            sx={{
+              color: "text.primary",
+              fontWeight: 700,
+              fontSize: 18,
+              lineHeight: 1.2,
+            }}
+          >
+            LearnAI
+          </Typography>
+          <Typography sx={{ color: "text.secondary", fontSize: 12.5 }}>
+            Smart Learning Platform
+          </Typography>
+        </Box>
+      </Stack>
+
+      {/* Middle content */}
+      <Box sx={{ maxWidth: 420 }}>
+        <Typography
+          sx={{
+            color: "text.primary",
+            fontWeight: 800,
+            fontSize: { md: "2rem", lg: "2.1rem" },
+            lineHeight: 1.15,
+          }}
+        >
+          Learn smarter,
+          <br />
+          <Box component="span" sx={{ color: "primary.main" }}>
+            not harder.
+          </Box>
+        </Typography>
+
+        <Typography
+          sx={{
+            color: "text.secondary",
+            fontSize: 15,
+            mt: 2.5,
+            lineHeight: 1.7,
+          }}
+        >
+          AI-powered summaries, adaptive quizzes, and real-time progress
+          tracking — all in one place.
+        </Typography>
+
+        <Stack spacing={1.8} sx={{ mt: 4 }}>
+          {FEATURES.map((f) => (
+            <Stack
+              key={f.label}
+              direction="row"
+              spacing={1.5}
+              sx={{ alignItems: "center" }}
+            >
+              <Avatar
+                sx={{ color: f.color, bgcolor: f.bg, width: 34, height: 34 }}
+              >
+                {f.icon}
+              </Avatar>
+              <Typography
+                sx={{ color: "text.primary", fontSize: 14.5, fontWeight: 500 }}
+              >
+                {f.label}
+              </Typography>
+            </Stack>
+          ))}
+        </Stack>
+      </Box>
+
+      {/* Testimonial — مثال توضيحي، استبدله برأي حقيقي أو امسحه */}
+      <Paper
+        elevation={0}
+        sx={{
+          bgcolor: "action.hover",
+          border: "1px solid rgba(255,255,255,0.08)",
+          borderRadius: 2,
+          p: 2.5,
+        }}
+      >
+        <Typography
+          sx={{
+            color: "text.secondary",
+            fontSize: 13.5,
+            lineHeight: 1.6,
+            fontStyle: "italic",
+          }}
+        >
+          "The AI summaries and quizzes helped me study faster and remember
+          more."
+        </Typography>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: "center", mt: 2 }}
+        >
+          <Avatar
+            sx={{
+              bgcolor: "primary.main",
+              width: 32,
+              height: 32,
+              fontSize: 13,
+              fontWeight: 700,
+            }}
+          >
+            S
+          </Avatar>
+          <Box>
+            <Typography
+              sx={{ color: "text.primary", fontSize: 13.5, fontWeight: 600 }}
+            >
+              Sample student
+            </Typography>
+            <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
+              Demo testimonial
+            </Typography>
+          </Box>
+        </Stack>
+      </Paper>
+    </Box>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export default function LoginPage() {
+  const navigate = useNavigate();
+
   const [tab, setTab] = useState(0); // 0 = Sign In, 1 = Register
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [userName, setUserName] = useState("");
-  const navigate = useNavigate();
 
-  const queryClient = useQueryClient();
+  const isRegister = tab === 1;
+
+  const handleAuthSuccess = (data) => {
+    if (!data?.token) {
+      toast.error("Login failed, please try again");
+      return;
+    }
+    localStorage.setItem("token", data.token);
+    navigate("/dashboard");
+  };
 
   const loginMutation = useMutation({
-    mutationFn: async (userData) => {
-      const res = await axios.post(
-        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/user/logIn",
-        userData,
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
-      if (data?.token) {
-        console.log(data.token);
-
-        localStorage.setItem("token", data.token);
-        navigate("/dashboard");
-        // بعد ما التسجيل ينجح، نحدث قائمة المستخدمين
-        queryClient.invalidateQueries({ queryKey: ["users"] });
-      }
-    },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || "حصل خطأ");
-      console.log(error);
-    },
+    mutationFn: async (credentials) =>
+      (await api.post("/api/user/logIn", credentials)).data,
+    onSuccess: handleAuthSuccess,
+    onError: (error) => toast.error(getErrorMessage(error, "Login failed")),
   });
-  const loginHandleSubmit = (e) => {
-    e.preventDefault();
-    loginMutation.mutate({
-      email: email,
-      password: password,
-    });
-  };
+
   const googleLoginMutation = useMutation({
-    mutationFn: async (credential) => {
-      const res = await axios.post(
-        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/user/google-login",
-        { credential },
-      );
-
-      return res.data;
-    },
-
-    onSuccess: (data) => {
-      if (data?.token) {
-        localStorage.setItem("token", data.token);
-
-        queryClient.invalidateQueries({ queryKey: ["users"] });
-
-        toast.success("Logged in successfully");
-
-        navigate("/dashboard");
-      }
-    },
-
-    onError: (error) => {
-      toast.error(error.response?.data?.message || "Google login failed");
-
-      console.error(error);
-    },
+    mutationFn: async (credential) =>
+      (await api.post("/api/user/google-login", { credential })).data,
+    onSuccess: handleAuthSuccess,
+    onError: (error) =>
+      toast.error(getErrorMessage(error, "Google login failed")),
   });
-  const RegisterMutation = useMutation({
-    mutationFn: async (userData) => {
-      const res = await axios.post(
-        "https://smart-learning-git-main-mohamed-yasser-0s-projects.vercel.app/api/user/register",
-        userData,
-      );
-      return res.data;
-    },
-    onSuccess: (data) => {
-      console.log(data);
+
+  const registerMutation = useMutation({
+    mutationFn: async (userData) =>
+      (await api.post("/api/user/register", userData)).data,
+    onSuccess: () => {
       toast.success("Account created successfully. Please log in");
+      setPassword("");
       setTab(0);
-      // بعد ما التسجيل ينجح، نحدث قائمة المستخدمين
-      queryClient.invalidateQueries({ queryKey: ["users"] });
     },
-    onError: (error) => {
-      toast.error(error.response?.data?.message || "حصل خطأ");
-      console.log(error);
-    },
+    onError: (error) =>
+      toast.error(getErrorMessage(error, "Registration failed")),
   });
-  const RegisterHandleSubmit = (e) => {
-    e.preventDefault();
-    RegisterMutation.mutate({
-      username: userName,
-      email: email,
-      password: password,
-    });
+
+  const isPending =
+    loginMutation.isPending ||
+    registerMutation.isPending ||
+    googleLoginMutation.isPending;
+
+  const validate = () => {
+    if (isRegister && userName.trim().length < 2)
+      return "Please enter your user name";
+    if (!EMAIL_RE.test(email.trim())) return "Please enter a valid email";
+    if (!password) return "Please enter your password";
+    if (isRegister && password.length < MIN_PASSWORD_LENGTH)
+      return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+    return null;
   };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    const errorMessage = validate();
+    if (errorMessage) {
+      toast.error(errorMessage);
+      return;
+    }
+
+    if (isRegister) {
+      registerMutation.mutate({
+        username: userName.trim(),
+        email: email.trim(),
+        password,
+      });
+    } else {
+      loginMutation.mutate({ email: email.trim(), password });
+    }
+  };
+
   return (
     <Box
       sx={{
         bgcolor: "background.default",
         minHeight: "100vh",
         display: "flex",
-        fontFamily: "'Inter', 'Segoe UI', sans-serif",
       }}
     >
-      {/* ---------------- LEFT PANEL ---------------- */}
-      <Box
-        sx={{
-          flex: "0 0 45%",
-          display: { xs: "none", md: "flex" },
-          flexDirection: "column",
-          justifyContent: "space-between",
-          bgcolor: "background.paper",
-          borderRight: `1px solid rgba(255,255,255,0.08)`,
-          p: { md: 6, lg: 7 },
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Logo */}
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <Avatar
-            sx={{
-              bgcolor: "primary.light",
-              width: 44,
-              height: 44,
-              borderRadius: "17px",
-            }}
-            variant="rounded"
-          >
-            <SchoolIcon sx={{ fontSize: 24 }} />
-          </Avatar>
-          <Box>
-            <Typography
-              sx={{
-                color: "text.primary",
-                fontWeight: 700,
-                fontSize: 18,
-                lineHeight: 1.2,
-              }}
-            >
-              LearnAI
-            </Typography>
-            <Typography sx={{ color: "text.secondary", fontSize: 12.5 }}>
-              Smart Learning Platform
-            </Typography>
-          </Box>
-        </Stack>
+      <BrandPanel />
 
-        {/* Middle content */}
-        <Box sx={{ maxWidth: 420 }}>
-          <Typography
-            sx={{
-              color: "text.primary",
-              fontWeight: 800,
-              fontSize: { md: "2rem", lg: "2.1rem" },
-              lineHeight: 1.15,
-            }}
-          >
-            Learn smarter,
-            <br />
-            <Box component="span" sx={{ color: "primary.main" }}>
-              not harder.
-            </Box>
-          </Typography>
-
-          <Typography
-            sx={{
-              color: "text.secondary",
-              fontSize: 15,
-              mt: 2.5,
-              lineHeight: 1.7,
-            }}
-          >
-            AI-powered recommendations, adaptive quizzes, and real-time progress
-            analytics — all in one place.
-          </Typography>
-
-          <Stack spacing={1.8} sx={{ mt: 4 }}>
-            {features.map((f) => (
-              <Stack
-                key={f.label}
-                direction="row"
-                spacing={1.5}
-                sx={{
-                  alignItems: "center",
-                }}
-              >
-                <Avatar
-                  sx={{ color: f.cr, bgcolor: f.bg, width: 34, height: 34 }}
-                >
-                  {f.icon}
-                </Avatar>
-                <Typography
-                  sx={{ color: "text.midle", fontSize: 14.5, fontWeight: 500 }}
-                >
-                  {f.label}
-                </Typography>
-              </Stack>
-            ))}
-          </Stack>
-        </Box>
-
-        {/* Testimonial */}
-        <Paper
-          elevation={0}
-          sx={{
-            bgcolor: "action.hover",
-            border: `1px solid rgba(255,255,255,0.08)`,
-            borderRadius: 2,
-            p: 2.5,
-          }}
-        >
-          <Typography
-            sx={{
-              color: "text.midle",
-              fontSize: 13.5,
-              lineHeight: 1.6,
-              fontStyle: "italic",
-            }}
-          >
-            "LearnAI helped me go from zero to landing a data science job in 6
-            months. The AI recommendations were spot-on."
-          </Typography>
-          <Stack
-            direction="row"
-            spacing={1.5}
-            alignItems="center"
-            sx={{ mt: 2 }}
-          >
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                width: 32,
-                height: 32,
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              SK
-            </Avatar>
-            <Box>
-              <Typography
-                sx={{ color: "text.primary", fontSize: 13.5, fontWeight: 600 }}
-              >
-                Sara K.
-              </Typography>
-              <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                Data Scientist @ Google
-              </Typography>
-            </Box>
-          </Stack>
-        </Paper>
-      </Box>
-
-      {/* ---------------- RIGHT PANEL ---------------- */}
+      {/* ---------------- Form panel ---------------- */}
       <Box
         sx={{
           flex: 1,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          position: "relative",
           px: 3,
+          py: 4,
         }}
       >
         <Box sx={{ width: "100%", maxWidth: 440 }}>
           <Typography
+            component="h1"
             sx={{ color: "text.primary", fontWeight: 800, fontSize: "1.7rem" }}
           >
-            Welcome back 👋
+            {isRegister ? "Create your account" : "Welcome back 👋"}
           </Typography>
           <Typography
             sx={{ color: "text.secondary", fontSize: 14.3, mt: 0.5, mb: 3.5 }}
           >
-            Sign in to continue your learning journey
+            {isRegister
+              ? "Join and start your learning journey"
+              : "Sign in to continue your learning journey"}
           </Typography>
 
-          {/* Tabs (Sign In / Register) */}
           <Tabs
             value={tab}
             onChange={(_, v) => setTab(v)}
@@ -349,221 +407,83 @@ export default function LoginPage() {
               "& .MuiTabs-indicator": { display: "none" },
             }}
           >
-            <Tab
-              label="Sign In"
-              sx={{
-                minHeight: 36,
-                borderRadius: "8px",
-                fontWeight: 700,
-                fontSize: 14,
-                textTransform: "none",
-                transition: "all .2s",
-                color: "text.secondary",
-                "&.Mui-selected": {
-                  color: "primary.contrastText",
-                  bgcolor: "primary.dark",
-                },
-              }}
-            />
-            <Tab
-              label="Register"
-              sx={{
-                minHeight: 36,
-                borderRadius: "8px",
-                fontWeight: 700,
-                fontSize: 14,
-                textTransform: "none",
-                transition: "all .2s",
-                color: "text.secondary",
-                "&.Mui-selected": {
-                  color: "primary.contrastText",
-                  bgcolor: "primary.dark",
-                },
-              }}
-            />
+            <Tab label="Sign In" sx={tabSx} />
+            <Tab label="Register" sx={tabSx} />
           </Tabs>
-          <Stack spacing={2} alignItems="center" sx={{mb:3 }}>
-            <Typography
-              sx={{
-                color: "text.secondary",
-                fontSize: 13,
-              }}
-            >
-              continue with
-            </Typography>
 
+          {/* Google */}
+          <Stack spacing={2} sx={{ alignItems: "center", mb: 3 }}>
             <GoogleLogin
-              onSuccess={(credentialResponse) => {
-                if (credentialResponse.credential) {
-                  googleLoginMutation.mutate(credentialResponse.credential);
-                }
+              onSuccess={({ credential }) => {
+                if (credential) googleLoginMutation.mutate(credential);
               }}
-              onError={() => {
-                toast.error("Google login failed");
-              }}
-              useOneTap={false}
+              onError={() => toast.error("Google login failed")}
             />
+            <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
+              or continue with email
+            </Typography>
           </Stack>
-          {/* username */}
-          {tab === 1 && (
-            <>
-              <Typography
-                sx={{
-                  color: "text.primary",
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  mb: 1,
-                }}
-              >
-                User Name
-              </Typography>
-              <TextField
-                fullWidth
+
+          {/* Email / password form */}
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            {isRegister && (
+              <FormField
+                id="username"
+                label="User Name"
                 placeholder="Alex"
+                autoComplete="username"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                sx={{
-                  mb: 2.5,
-                  "& .MuiOutlinedInput-root": {
-                    bgcolor: "divider",
-                    borderRadius: "10px",
-                    color: "text.primary",
-                    "& fieldset": { borderColor: "action.selected" },
-                    "&:hover fieldset": { borderColor: "primary.main" },
-                    "&.Mui-focused fieldset": { borderColor: "primary.main" },
-                  },
-                  "& input::placeholder": {
-                    color: "text.secondary",
-                    opacity: 1,
-                  },
-                }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <MailIcon
-                        sx={{ color: "text.secondary", fontSize: 20 }}
-                      />
-                    </InputAdornment>
-                  ),
-                }}
+                icon={<PersonIcon sx={{ color: "text.secondary", fontSize: 20 }} />}
               />
-            </>
-          )}
+            )}
 
-          {/* Email */}
-          <Typography
-            sx={{
-              color: "text.primary",
-              fontSize: 13.5,
-              fontWeight: 600,
-              mb: 1,
-            }}
-          >
-            Email Address
-          </Typography>
-          <TextField
-            fullWidth
-            placeholder="alex@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            sx={{
-              mb: 2.5,
-              "& .MuiOutlinedInput-root": {
-                bgcolor: "divider",
-                borderRadius: "10px",
-                color: "text.primary",
-                "& fieldset": { borderColor: "action.hover" },
-                "&:hover fieldset": { borderColor: "primary.main" },
-                "&.Mui-focused fieldset": { borderColor: "primary.main" },
-              },
-              "& input::placeholder": { color: "text.secondary", opacity: 1 },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <MailIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+            <FormField
+              id="email"
+              label="Email Address"
+              type="email"
+              placeholder="alex@email.com"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon={<MailIcon sx={{ color: "text.secondary", fontSize: 20 }} />}
+            />
+
+            <FormField
+              id="password"
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              autoComplete={isRegister ? "new-password" : "current-password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              icon={<LockIcon sx={{ color: "text.secondary", fontSize: 20 }} />}
+              endAdornment={
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((s) => !s)}
+                    edge="end"
+                    sx={{ color: "text.secondary" }}
+                  >
+                    {showPassword ? (
+                      <VisibilityOff fontSize="small" />
+                    ) : (
+                      <Visibility fontSize="small" />
+                    )}
+                  </IconButton>
                 </InputAdornment>
-              ),
-            }}
-          />
+              }
+            />
 
-          {/* Password */}
-          <Typography
-            sx={{
-              color: "text.primary",
-              fontSize: 13.5,
-              fontWeight: 600,
-              mb: 1,
-            }}
-          >
-            Password
-          </Typography>
-          <TextField
-            fullWidth
-            type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            sx={{
-              width: "100%",
-              mb: 1,
-              "& .MuiOutlinedInput-root": {
-                bgcolor: "divider",
-                borderRadius: "10px",
-                color: "text.primary",
-                "& fieldset": { borderColor: "action.hover" },
-                "&:hover fieldset": { borderColor: "primary.main" },
-                "&.Mui-focused fieldset": { borderColor: "primary.main" },
-              },
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <LockIcon sx={{ color: "text.secondary", fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword((s) => !s)}
-                      edge="end"
-                      sx={{ color: "text.secondary" }}
-                    >
-                      {showPassword ? (
-                        <VisibilityOff fontSize="small" />
-                      ) : (
-                        <Visibility fontSize="small" />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              },
-            }}
-          />
-          {/* Forgot password */}
-          <Box sx={{ textAlign: "right", mb: 3 }}>
-            <Link
-              href="#"
-              underline="hover"
-              sx={{ color: "primary.main", fontSize: 13, fontWeight: 600 }}
-            >
-              Forgot password?
-            </Link>
-          </Box>
-
-          {/* Submit */}
-          <form onSubmit={tab ? RegisterHandleSubmit : loginHandleSubmit}>
             <Button
               type="submit"
-              disabled={
-                tab ? RegisterMutation.isPending : loginMutation.isPending
-              }
+              disabled={isPending}
               fullWidth
               variant="contained"
-              endIcon={<ArrowForwardIcon />}
+              endIcon={!isPending && <ArrowForwardIcon />}
               sx={{
+                mt: 1,
                 bgcolor: "primary.dark",
                 color: "primary.contrastText",
                 fontWeight: 700,
@@ -575,14 +495,17 @@ export default function LoginPage() {
                 "&:hover": { bgcolor: "primary.main", boxShadow: "none" },
               }}
             >
-              {loginMutation.isPending ? (
+              {isPending ? (
                 <CircularProgress size={24} color="inherit" />
+              ) : isRegister ? (
+                "Create account"
               ) : (
-                "LogIn"
+                "Sign In"
               )}
             </Button>
-          </form>
-          {/* Register link */}
+          </Box>
+
+          {/* Switch mode */}
           <Typography
             sx={{
               textAlign: "center",
@@ -591,34 +514,22 @@ export default function LoginPage() {
               color: "text.secondary",
             }}
           >
-            Don't have an account?{" "}
+            {isRegister ? "Already have an account? " : "Don't have an account? "}
             <Link
-              href="#"
+              component="button"
+              type="button"
               underline="hover"
-              onClick={() => setTab(1)}
-              sx={{ color: "primary.main", fontWeight: 700 }}
+              onClick={() => setTab(isRegister ? 0 : 1)}
+              sx={{
+                color: "primary.main",
+                fontWeight: 700,
+                verticalAlign: "baseline",
+              }}
             >
-              Register
+              {isRegister ? "Sign In" : "Register"}
             </Link>
           </Typography>
         </Box>
-
-        {/* Help button */}
-        <IconButton
-          sx={{
-            position: "absolute",
-            bottom: 24,
-            right: 24,
-            bgcolor: "divider",
-            color: "text.secondary",
-            width: 38,
-            fontSize: 20,
-            height: 38,
-            "&:hover": { bgcolor: "action.hover" },
-          }}
-        >
-          ?
-        </IconButton>
       </Box>
     </Box>
   );
