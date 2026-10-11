@@ -86,11 +86,7 @@ const TYPE_TEXT = {
 
 // الـ AI ساعات بيرجّع JSON جوه ```json fences
 const parseAiJson = (raw) =>
-  JSON.parse(
-    String(raw)
-      .replace(/```json|```/g, "")
-      .trim(),
-  );
+  JSON.parse(String(raw).replace(/```json|```/g, "").trim());
 
 // ---------------------------------------------------------------------------
 // Question editor
@@ -211,7 +207,6 @@ export default function UploadLesson() {
     order: 1,
     type: "video",
     vUrl: "",
-    isFree: false,
     articleContent: "",
     questions: [emptyQuestion()],
   });
@@ -354,7 +349,6 @@ export default function UploadLesson() {
       title: formData.title.trim(),
       order: formData.order,
       type: formData.type,
-      isFree: formData.isFree,
       course: courseId,
     };
 
@@ -384,7 +378,9 @@ export default function UploadLesson() {
   const updateQuestion = (qIndex, updater) =>
     setFormData((prev) => ({
       ...prev,
-      questions: prev.questions.map((q, i) => (i === qIndex ? updater(q) : q)),
+      questions: prev.questions.map((q, i) =>
+        i === qIndex ? updater(q) : q,
+      ),
     }));
 
   const addQuestion = () =>
@@ -468,11 +464,7 @@ export default function UploadLesson() {
         }}
       >
         {/* Top bar */}
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{ alignItems: "center", mb: 3 }}
-        >
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 3 }}>
           <IconButton
             aria-label="رجوع"
             onClick={() => navigate(-1)}
@@ -545,16 +537,6 @@ export default function UploadLesson() {
                     sx={fieldSx}
                   />
                 </Stack>
-
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={formData.isFree}
-                      onChange={(e) => setField("isFree", e.target.checked)}
-                    />
-                  }
-                  label="درس مجاني (متاح للجميع)"
-                />
               </Stack>
             </Box>
 
@@ -601,11 +583,7 @@ export default function UploadLesson() {
                       size="small"
                       onClick={addQuestion}
                       startIcon={<AddCircleOutlineRounded fontSize="small" />}
-                      sx={{
-                        textTransform: "none",
-                        borderRadius: "10px",
-                        fontWeight: 600,
-                      }}
+                      sx={{ textTransform: "none", borderRadius: "10px", fontWeight: 600 }}
                     >
                       إضافة سؤال
                     </Button>
@@ -636,9 +614,7 @@ export default function UploadLesson() {
                             options: [...x.options, ""],
                           }))
                         }
-                        onRemoveOption={(oIndex) =>
-                          removeOption(qIndex, oIndex)
-                        }
+                        onRemoveOption={(oIndex) => removeOption(qIndex, oIndex)}
                         onCorrect={(oIndex) =>
                           updateQuestion(qIndex, (x) => ({
                             ...x,

@@ -20,6 +20,6 @@ router.route("/:id")
         uploadImage.single("thumbnail"),
         patchCourses
     )
-    .get(gitSingle)
+    .get(verifyToken,gitSingle)
     .delete(verifyToken, DeleteCourses)
 module.exports = router

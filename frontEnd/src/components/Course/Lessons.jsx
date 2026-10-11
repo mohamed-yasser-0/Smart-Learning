@@ -146,7 +146,10 @@ function MetaItem({ icon, value, color = "text.secondary" }) {
 
 function CourseMeta({ course }) {
   if (!course) return null;
-  const name = course.instructor?.name;
+  const name =
+    typeof course.instructor === "string"
+      ? course.instructor
+      : course.instructor?.name;
   return (
     <Stack
       direction="row"
@@ -158,7 +161,12 @@ function CourseMeta({ course }) {
           <Avatar
             src={course.instructor?.image}
             alt={name}
-            sx={{ width: 22, height: 22, fontSize: 12, bgcolor: "primary.main" }}
+            sx={{
+              width: 22,
+              height: 22,
+              fontSize: 12,
+              bgcolor: "primary.main",
+            }}
           >
             {name.charAt(0)}
           </Avatar>
@@ -168,7 +176,9 @@ function CourseMeta({ course }) {
         </Stack>
       )}
       <MetaItem
-        icon={<AccessTimeRounded sx={{ fontSize: 15, color: "text.secondary" }} />}
+        icon={
+          <AccessTimeRounded sx={{ fontSize: 15, color: "text.secondary" }} />
+        }
         value={course.duration}
       />
       <MetaItem
@@ -283,7 +293,10 @@ function ChatPanel({ lesson }) {
     onSuccess: (data) =>
       addMessage("bot", data?.respo ?? "لم أتمكن من توليد رد."),
     onError: (err) =>
-      addMessage("bot", err.response?.data?.message || "حصل خطأ، حاول مرة أخرى."),
+      addMessage(
+        "bot",
+        err.response?.data?.message || "حصل خطأ، حاول مرة أخرى.",
+      ),
   });
 
   useEffect(() => {
@@ -371,7 +384,11 @@ function ChatPanel({ lesson }) {
           startIcon={<AutoAwesomeIcon />}
           onClick={handleSummary}
           disabled={chatMutation.isPending}
-          sx={{ borderRadius: "10px", textTransform: "none", whiteSpace: "nowrap" }}
+          sx={{
+            borderRadius: "10px",
+            textTransform: "none",
+            whiteSpace: "nowrap",
+          }}
         >
           ملخص الفيديو
         </Button>
@@ -413,7 +430,11 @@ function ChatPanel({ lesson }) {
                 }}
               >
                 <Typography
-                  sx={{ fontSize: 13.5, lineHeight: 1.7, whiteSpace: "pre-wrap" }}
+                  sx={{
+                    fontSize: 13.5,
+                    lineHeight: 1.7,
+                    whiteSpace: "pre-wrap",
+                  }}
                 >
                   {m.text}
                 </Typography>
@@ -462,7 +483,12 @@ function ChatPanel({ lesson }) {
               handleSend();
             }
           }}
-          sx={{ "& .MuiOutlinedInput-root": { borderRadius: "12px", fontSize: 13.5 } }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              borderRadius: "12px",
+              fontSize: 13.5,
+            },
+          }}
         />
         <IconButton
           aria-label="إرسال"
@@ -499,7 +525,11 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
   const result =
     localResult ??
     (Array.isArray(savedScore)
-      ? { score: savedScore[0], total: savedScore[1], percentage: savedScore[2] }
+      ? {
+          score: savedScore[0],
+          total: savedScore[1],
+          percentage: savedScore[2],
+        }
       : null);
 
   if (!questions.length) {
@@ -524,17 +554,30 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
             mb: 3,
           }}
         >
-          <Typography variant="h4" fontWeight={800} sx={{ fontSize: { xs: 24, sm: 30 }, mb: 2 }}>
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            sx={{ fontSize: { xs: 24, sm: 30 }, mb: 2 }}
+          >
             🎉 Quiz Finished
           </Typography>
-          <Typography sx={{ fontSize: { xs: 48, sm: 64 }, fontWeight: 800, color: "#7C6BF0", lineHeight: 1, mb: 2 }}>
+          <Typography
+            sx={{
+              fontSize: { xs: 48, sm: 64 },
+              fontWeight: 800,
+              color: "#7C6BF0",
+              lineHeight: 1,
+              mb: 2,
+            }}
+          >
             {result.score} / {result.total}
           </Typography>
           <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
             {result.percentage}%
           </Typography>
           <Typography sx={{ color: "text.secondary" }}>
-            You answered {result.score} out of {result.total} questions correctly.
+            You answered {result.score} out of {result.total} questions
+            correctly.
           </Typography>
         </Box>
 
@@ -564,7 +607,9 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
                       borderRadius: 2.5,
                       border: "1px solid",
                       borderColor: isCorrect ? "success.main" : "error.main",
-                      bgcolor: isCorrect ? "rgba(46,125,50,0.06)" : "rgba(211,47,47,0.06)",
+                      bgcolor: isCorrect
+                        ? "rgba(46,125,50,0.06)"
+                        : "rgba(211,47,47,0.06)",
                     }}
                   >
                     <Typography fontWeight={700} sx={{ mb: 1.5 }}>
@@ -572,11 +617,17 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
                     </Typography>
                     <Typography
                       variant="body2"
-                      sx={{ mb: 0.7, color: isCorrect ? "success.main" : "error.main" }}
+                      sx={{
+                        mb: 0.7,
+                        color: isCorrect ? "success.main" : "error.main",
+                      }}
                     >
                       Your answer: {userAnswer}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: "success.main", fontWeight: 600 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "success.main", fontWeight: 600 }}
+                    >
                       Correct answer: {q.correctAnswer}
                     </Typography>
                   </Box>
@@ -604,7 +655,9 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
     }
 
     const total = questions.length;
-    const score = questions.filter((q, i) => newAnswers[i] === q.correctAnswer).length;
+    const score = questions.filter(
+      (q, i) => newAnswers[i] === q.correctAnswer,
+    ).length;
     const percentage = Math.round((score / total) * 100);
 
     try {
@@ -618,7 +671,11 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
 
   return (
     <Box sx={{ maxWidth: 600, mx: "auto" }}>
-      <Typography variant="h5" fontWeight={800} sx={{ fontSize: { xs: 20, sm: 24 } }}>
+      <Typography
+        variant="h5"
+        fontWeight={800}
+        sx={{ fontSize: { xs: 20, sm: 24 } }}
+      >
         {lesson.title}
       </Typography>
       <Typography
@@ -643,7 +700,11 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
           p: { xs: 2.5, sm: 4 },
         }}
       >
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 3, fontSize: { xs: 16, sm: 18 } }}>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          sx={{ mb: 3, fontSize: { xs: 16, sm: 18 } }}
+        >
           {question.question}
         </Typography>
 
@@ -673,7 +734,9 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
                     : "1px solid rgba(255,255,255,0.08)",
                   transition: "all 0.15s ease",
                   "&:hover": {
-                    bgcolor: isSelected ? "rgba(124,107,240,0.22)" : "#7777775b",
+                    bgcolor: isSelected
+                      ? "rgba(124,107,240,0.22)"
+                      : "#7777775b",
                   },
                 }}
               >
@@ -687,7 +750,9 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
                     justifyContent: "center",
                     flexShrink: 0,
                     bgcolor: isSelected ? "#7C6BF0" : "rgba(124,107,240,0.12)",
-                    border: isSelected ? "none" : "1px solid rgba(124,107,240,0.3)",
+                    border: isSelected
+                      ? "none"
+                      : "1px solid rgba(124,107,240,0.3)",
                   }}
                 >
                   <Typography
@@ -845,7 +910,9 @@ export default function CourseLessons() {
     return (
       <Box sx={{ p: 4 }}>
         <Alert severity="error">
-          حصل خطأ: {lessonsQuery.error.response?.data?.message || lessonsQuery.error.message}
+          حصل خطأ:{" "}
+          {lessonsQuery.error.response?.data?.message ||
+            lessonsQuery.error.message}
         </Alert>
       </Box>
     );
@@ -934,7 +1001,11 @@ export default function CourseLessons() {
 
               {activeLesson.description && (
                 <Typography
-                  sx={{ fontSize: 14.5, lineHeight: 1.9, color: "text.secondary" }}
+                  sx={{
+                    fontSize: 14.5,
+                    lineHeight: 1.9,
+                    color: "text.secondary",
+                  }}
                 >
                   {activeLesson.description}
                 </Typography>
@@ -957,7 +1028,12 @@ export default function CourseLessons() {
               <LessonHeader lesson={activeLesson} />
               {activeLesson.description && (
                 <Typography
-                  sx={{ fontSize: 14.5, lineHeight: 1.9, color: "text.secondary", mb: 3 }}
+                  sx={{
+                    fontSize: 14.5,
+                    lineHeight: 1.9,
+                    color: "text.secondary",
+                    mb: 3,
+                  }}
                 >
                   {activeLesson.description}
                 </Typography>
@@ -976,11 +1052,14 @@ export default function CourseLessons() {
                     fontSize: 15.5,
                     lineHeight: 2,
                     whiteSpace: "pre-wrap",
-                    color: activeLesson.articleContent ? "text.primary" : "text.secondary",
+                    color: activeLesson.articleContent
+                      ? "text.primary"
+                      : "text.secondary",
                     textAlign: activeLesson.articleContent ? "start" : "center",
                   }}
                 >
-                  {activeLesson.articleContent || "لا يوجد محتوى لهذا المقال بعد."}
+                  {activeLesson.articleContent ||
+                    "لا يوجد محتوى لهذا المقال بعد."}
                 </Typography>
               </Box>
               <LessonNav
@@ -1019,7 +1098,11 @@ export default function CourseLessons() {
         >
           <Stack
             direction="row"
-            sx={{ alignItems: "center", justifyContent: "space-between", mb: 2 }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2,
+            }}
           >
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontSize: 16, fontWeight: 700, mb: 0.5 }}>
@@ -1086,15 +1169,17 @@ export default function CourseLessons() {
                     {lesson.title}
                   </Typography>
                   <Typography
-                    sx={{ fontSize: 12, color: "text.disabled", fontFamily: "monospace" }}
+                    sx={{
+                      fontSize: 12,
+                      color: "text.disabled",
+                      fontFamily: "monospace",
+                    }}
                   >
                     {lesson.type === "quiz"
                       ? "Quiz"
                       : lesson.type === "article"
                         ? "Article"
-                        : lesson.isFree
-                          ? "مجاني"
-                          : ""}
+                        : ""}
                   </Typography>
                 </Button>
               );

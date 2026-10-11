@@ -48,7 +48,6 @@ export default function UploadCourse({ activeCourse, onClose }) {
     category: activeCourse?.category ?? "",
     level: activeCourse?.level ?? "",
     instructor: getInstructorName(activeCourse?.instructor),
-    price: activeCourse?.price ?? 0,
     status: activeCourse?.status ?? "draft",
   });
 
@@ -121,7 +120,6 @@ export default function UploadCourse({ activeCourse, onClose }) {
     body.append("title", form.title.trim());
     body.append("description", form.description.trim());
     body.append("instructor", form.instructor.trim());
-    body.append("price", form.price);
     body.append("status", form.status);
     // القيم الفاضية مش بتتبعت عشان ما تكسرش validation الـ enum في الـ backend
     if (form.category) body.append("category", form.category);
@@ -244,7 +242,10 @@ export default function UploadCourse({ activeCourse, onClose }) {
                   <Switch
                     checked={form.status === "published"}
                     onChange={(e) =>
-                      setField("status", e.target.checked ? "published" : "draft")
+                      setField(
+                        "status",
+                        e.target.checked ? "published" : "draft",
+                      )
                     }
                   />
                 }
