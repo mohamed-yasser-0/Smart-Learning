@@ -26,23 +26,12 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
 import UploadCourse from "./UploadCourse";
 import ConfirmDialog from "../DeleteCourseDialog";
-
-// ---------------------------------------------------------------------------
-// API — keep the base URL in .env:  VITE_API_URL=https://your-api.example.com
-// ---------------------------------------------------------------------------
-const api = axios.create({ baseURL: import.meta.env.VITE_API_URL });
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+import { api } from "../../api/client";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -96,7 +85,10 @@ function CoursesSkeleton() {
 // Course card
 // ---------------------------------------------------------------------------
 function CourseCard({ course, isOwner, onEdit, onDelete, onOpen }) {
-  const instructorName = course.instructor?.name || "Instructor";
+  const instructorName =
+    (typeof course.instructor === "string"
+      ? course.instructor
+      : course.instructor) || "Instructor";
 
   return (
     <Card
@@ -416,7 +408,13 @@ export default function CourseLibrary() {
               <CloseRoundedIcon />
             </IconButton>
           </Box>
-          <UploadCourse activeCourse={activeCourse} />
+          <UploadCourse
+            activeCourse={activeCourse}
+            onClose={() => {
+              setShowUploadCourse(false);
+              setActiveCourse(null);
+            }}
+          />
         </>
       ) : (
         <Container maxWidth="lg">

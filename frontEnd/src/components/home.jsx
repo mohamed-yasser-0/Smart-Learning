@@ -202,7 +202,9 @@ function StatCard({ icon, value, label, color }) {
           >
             {value}
           </Typography>
-          <Typography sx={{ fontSize: "0.8rem", color: "text.secondary", mt: 0.3 }}>
+          <Typography
+            sx={{ fontSize: "0.8rem", color: "text.secondary", mt: 0.3 }}
+          >
             {label}
           </Typography>
         </Box>
@@ -224,6 +226,10 @@ export default function Home() {
     queryKey: ["courses", 1],
     queryFn: async () => (await api.get("/api/courses")).data,
   });
+  const mycoursesQuery = useQuery({
+    queryKey: ["mycourses"],
+    queryFn: async () => (await api.get("/api/courses/mycourses")).data,
+  });
 
   const progressQuery = useQuery({
     queryKey: ["progress"],
@@ -231,14 +237,20 @@ export default function Home() {
   });
 
   const courses = coursesQuery.data?.data?.course;
+  const mycourses = mycoursesQuery.data?.data?.course;
+  const allCourses = [...(courses ?? []), ...(mycourses ?? [])];
   const progress = progressQuery.data?.data?.progres;
+
   // ---- الإحصائيات ----
   const stats = useMemo(() => {
     const list = progress ?? [];
     const totalMinutes = list.reduce((sum, p) => sum + (p.duration ?? 0), 0);
     const quizzes = list.filter((p) => p.quizScore?.length > 0);
     const lessonsDone = list.filter((p) => !p.quizScore?.length);
-    const quizTotal = quizzes.reduce((sum, p) => sum + (p.quizScore[2] ?? 0), 0);
+    const quizTotal = quizzes.reduce(
+      (sum, p) => sum + (p.quizScore[2] ?? 0),
+      0,
+    );
 
     return {
       hours: Math.round((totalMinutes / MINUTES_PER_HOUR) * 10) / 10,
@@ -251,7 +263,7 @@ export default function Home() {
 
   // ---- الكورسات اللي المستخدم بدأها (الأحدث نشاطاً أولاً) ----
   const started = useMemo(() => {
-    if (!courses || !progress) return [];
+    if (!allCourses || !progress) return [];
     const orderedIds = [];
     [...progress]
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -259,12 +271,14 @@ export default function Home() {
         if (p.courseId && !orderedIds.includes(p.courseId))
           orderedIds.push(p.courseId);
       });
+    console.log("order", orderedIds);
     return orderedIds
-      .map((id) => courses.find((c) => c._id === id))
+      .map((id) => allCourses.find((c) => c._id === id))
       .filter(Boolean)
       .slice(0, 4);
-  }, [courses, progress]);
+  }, [allCourses, progress]);
 
+  console.log(started);
   // نفس مفتاح CourseLessons عشان الكاش يتشارك
   const lessonQueries = useQueries({
     queries: started.map((course) => ({
@@ -341,7 +355,9 @@ export default function Home() {
           >
             {getGreeting()}, {user?.username || "there"} 👋
           </Typography>
-          <Typography sx={{ fontSize: "0.95rem", color: "text.secondary", mt: 0.6 }}>
+          <Typography
+            sx={{ fontSize: "0.95rem", color: "text.secondary", mt: 0.6 }}
+          >
             {stats.streak > 0
               ? `You're on a ${stats.streak}-day streak. Keep it up!`
               : "Complete a lesson today to start your streak."}
@@ -401,7 +417,9 @@ export default function Home() {
                   <Typography sx={{ fontSize: "1.05rem", fontWeight: 600 }}>
                     Weekly Study Activity
                   </Typography>
-                  <Typography sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
+                  <Typography
+                    sx={{ fontSize: "0.8rem", color: "text.secondary" }}
+                  >
                     {formatShortDate(weekStart)} – {formatShortDate(weekEnd)}
                   </Typography>
                 </Box>
@@ -412,9 +430,23 @@ export default function Home() {
                       margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                     >
                       <defs>
-                        <linearGradient id="colorHours" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#7C4DFF" stopOpacity={0.35} />
-                          <stop offset="95%" stopColor="#7C4DFF" stopOpacity={0} />
+                        <linearGradient
+                          id="colorHours"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#7C4DFF"
+                            stopOpacity={0.35}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#7C4DFF"
+                            stopOpacity={0}
+                          />
                         </linearGradient>
                       </defs>
                       <CartesianGrid
@@ -464,12 +496,16 @@ export default function Home() {
           <Grid size={{ xs: 12, md: 4 }}>
             <Card sx={cardSx}>
               <CardContent sx={{ p: 2.5 }}>
-                <Typography sx={{ fontSize: "1.05rem", fontWeight: 600, mb: 2 }}>
+                <Typography
+                  sx={{ fontSize: "1.05rem", fontWeight: 600, mb: 2 }}
+                >
                   Course Progress
                 </Typography>
 
                 {courseStats.length === 0 ? (
-                  <Typography sx={{ fontSize: "0.85rem", color: "text.secondary" }}>
+                  <Typography
+                    sx={{ fontSize: "0.85rem", color: "text.secondary" }}
+                  >
                     Your course progress will show up here once you complete
                     your first lesson.
                   </Typography>
@@ -512,12 +548,17 @@ export default function Home() {
                             />
                             <Typography
                               noWrap
-                              sx={{ fontSize: "0.85rem", color: "text.secondary" }}
+                              sx={{
+                                fontSize: "0.85rem",
+                                color: "text.secondary",
+                              }}
                             >
                               {s.course.title}
                             </Typography>
                           </Box>
-                          <Typography sx={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                          <Typography
+                            sx={{ fontSize: "0.85rem", fontWeight: 600 }}
+                          >
                             {s.percent}%
                           </Typography>
                         </Box>
@@ -544,7 +585,11 @@ export default function Home() {
               <Button
                 variant="contained"
                 onClick={() => navigate("/courses")}
-                sx={{ textTransform: "none", borderRadius: "10px", fontWeight: 600 }}
+                sx={{
+                  textTransform: "none",
+                  borderRadius: "10px",
+                  fontWeight: 600,
+                }}
               >
                 Browse courses
               </Button>
@@ -587,11 +632,21 @@ export default function Home() {
                         {s.nextText}
                       </Typography>
 
-                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.6 }}>
-                        <Typography sx={{ fontSize: "0.75rem", color: "text.secondary" }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          mb: 0.6,
+                        }}
+                      >
+                        <Typography
+                          sx={{ fontSize: "0.75rem", color: "text.secondary" }}
+                        >
                           Progress
                         </Typography>
-                        <Typography sx={{ fontSize: "0.75rem", fontWeight: 600 }}>
+                        <Typography
+                          sx={{ fontSize: "0.75rem", fontWeight: 600 }}
+                        >
                           {s.percent}%
                         </Typography>
                       </Box>
