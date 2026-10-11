@@ -71,15 +71,20 @@ function getYouTubeId(url) {
 }
 
 const typeIcon = (type, done) => {
-  if (done)
+  if (done) {
     return <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />;
-  if (type === "quiz")
-    return <QuizRounded sx={{ fontSize: 18, color: "primary.light" }} />;
-  if (type === "article")
-    return <ArticleRounded sx={{ fontSize: 18, color: "primary.light" }} />;
-  return <PlayCircleIcon sx={{ fontSize: 18, color: "primary.light" }} />;
-};
+  }
 
+  if (type === "quiz") {
+    return <QuizRounded sx={{ fontSize: 18, color: "primary.light" }} />;
+  }
+
+  if (type === "article") {
+    return <ArticleRounded sx={{ fontSize: 18, color: "primary.light" }} />;
+  }
+
+  return <PlayCircleIcon sx={{ fontSize: 20, color: "#00BFA5" }} />;
+};
 // ---------------------------------------------------------------------------
 // Small presentational components
 // ---------------------------------------------------------------------------
@@ -1148,9 +1153,32 @@ export default function CourseLessons() {
                     px: 1.2,
                     py: 1,
                     textTransform: "none",
-                    bgcolor: isActive ? "action.selected" : "transparent",
+                    bgcolor:
+                      lesson.type === "video"
+                        ? isActive
+                          ? "rgba(0,191,165,0.16)"
+                          : "rgba(0,191,165,0.04)"
+                        : isActive
+                          ? "action.selected"
+                          : "transparent",
+
                     border: "1px solid",
-                    borderColor: isActive ? "primary.main" : "transparent",
+
+                    borderColor:
+                      lesson.type === "video"
+                        ? isActive
+                          ? "#00BFA5"
+                          : "rgba(0,191,165,0.12)"
+                        : isActive
+                          ? "primary.main"
+                          : "transparent",
+
+                    "&:hover": {
+                      bgcolor:
+                        lesson.type === "video"
+                          ? "rgba(0,191,165,0.12)"
+                          : "action.hover",
+                    },
                     "&:hover": {
                       bgcolor: isActive ? "action.selected" : "action.hover",
                     },
