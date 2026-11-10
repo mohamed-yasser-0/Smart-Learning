@@ -31,7 +31,7 @@ const INITIAL_MESSAGES = [
 
 const ChatBot = () => {
   const token = localStorage.getItem("token");
-  const user = token ? jwtDecode(token) : null;
+  const user = token ? jwtDecode<{ username: string }>(token) : null;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -39,14 +39,14 @@ const ChatBot = () => {
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
 
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   // --------------------------------------------------
   // API Mutation
   // --------------------------------------------------
 
   const chatMutation = useMutation({
-    mutationFn: async (summary) => {
+    mutationFn: async (summary: string) => {
       const token = localStorage.getItem("token");
 
       const res = await axios.post(
@@ -84,7 +84,11 @@ const ChatBot = () => {
     // --------------------------------------------------
 
     onError: (error) => {
-      toast.error(error.response?.data?.message || "حصل خطأ أثناء التلخيص");
+      if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "حصل خطأ أثناء التلخيص");
+      } else {
+        toast.error("حصل خطأ أثناء التلخيص");
+      }
     },
   });
 
@@ -124,7 +128,7 @@ Student message: and my name is ${user?.username || "Student"}: ${trimmed}`);
   // Enter
   // --------------------------------------------------
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();

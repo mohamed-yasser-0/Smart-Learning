@@ -3,20 +3,21 @@ import { Route, Routes, useNavigate } from "react-router-dom";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { Toaster } from "react-hot-toast";
 import "./App.css";
-import LoginPage from "./components/Auth";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import type { ReactNode } from "react";
+import LoginPage from "./components/Auth";
 
 // الصفحات بتتحمّل عند الحاجة بس (code splitting)
 const Home = lazy(() => import("./components/home"));
 const Courses = lazy(() => import("./components/Course/Courses"));
 const CourseLessons = lazy(() => import("./components/Course/Lessons"));
-const UploadCourse = lazy(() => import("./components/Course/UploadCourse"));
 const UploadLesson = lazy(() => import("./components/Course/UploadLesson"));
-const Quizzes = lazy(() => import("./components/Quizzes/Quizzes"));
-const QuizQuestion = lazy(() => import("./components/Quizzes/QuizQuestion"));
-const Progress = lazy(() => import("./components/Progress"));
-const ForYou = lazy(() => import("./components/For-you"));
+const UploadCourse = lazy(() => import("./components/Course/UploadCourse"));
+// const Quizzes = lazy(() => import("./components/Quizzes/Quizzes.jsx"));
+// const QuizQuestion = lazy(() => import("./components/Quizzes/QuizQuestion.js"));
+// const Progress = lazy(() => import("./components/Progress.js"));
+// const ForYou = lazy(() => import("./components/For-you.js"));
 
 function PageLoader() {
   return (
@@ -27,7 +28,7 @@ function PageLoader() {
 }
 
 // بيلف الصفحة بـ Suspense عشان الـ Layout يفضل ظاهر أثناء التحميل
-const page = (element) => (
+const page = (element: ReactNode) => (
   <Suspense fallback={<PageLoader />}>{element}</Suspense>
 );
 
@@ -35,11 +36,11 @@ function NotFound() {
   const navigate = useNavigate();
   return (
     <Box sx={{ textAlign: "center", py: 10 }}>
-      <Typography variant="h3" fontWeight={800}>
+      <Typography variant="h3" sx={{ fontWeight: 800 }}>
         404
       </Typography>
       <Typography sx={{ color: "text.secondary", mb: 3 }}>
-        الصفحة غير موجودة
+        الصفحة غير موجودة حاليا
       </Typography>
       <Button
         variant="contained"
@@ -71,8 +72,11 @@ const toastOptions = {
     iconTheme: { primary: "#fff", secondary: "#ef4444" },
   },
 };
-
-function App({ mode, setMode }) {
+interface AppProps {
+  mode: string;
+  setMode(mode: string): void;
+}
+function App({ mode, setMode }: AppProps) {
   return (
     <>
       <Routes>
@@ -88,15 +92,31 @@ function App({ mode, setMode }) {
           <Route path="/dashboard" element={page(<Home />)} />
           <Route path="/courses" element={page(<Courses />)} />
           <Route path="/courses/:id" element={page(<CourseLessons />)} />
-          <Route path="/UploadCourse" element={page(<UploadCourse />)} />
+          <Route
+            path="/UploadCourse"
+            element={page(
+              <UploadCourse
+                activeCourse={{
+                  _id: "",
+                  title: "",
+                  description: "",
+                  category: "",
+                  level: "",
+                  instructor: "",
+                  status: "",
+                  thumbnail: "",
+                }}
+              />,
+            )}
+          />
           <Route
             path="/courses/:id/UploadLesson"
             element={page(<UploadLesson />)}
           />
-          <Route path="/quizzes" element={page(<Quizzes />)} />
+          {/* <Route path="/quizzes" element={page(<Quizzes />)} />
           <Route path="/quizzes/question" element={page(<QuizQuestion />)} />
           <Route path="/progress" element={page(<Progress />)} />
-          <Route path="/for-you" element={page(<ForYou />)} />
+          <Route path="/for-you" element={page(<ForYou />)} /> */}
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

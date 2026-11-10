@@ -1,5 +1,5 @@
 // يرجّع الـ video id من أي صيغة لينك يوتيوب، أو null لو اللينك مش صالح
-export function getYouTubeId(url) {
+export function getYouTubeId(url:string) {
   try {
     const u = new URL(String(url).trim());
     const host = u.hostname.replace(/^www\./, "");

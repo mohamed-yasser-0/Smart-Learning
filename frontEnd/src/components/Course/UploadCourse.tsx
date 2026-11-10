@@ -18,6 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/client";
+import axios from "axios";
 
 const MAX_IMAGE_MB = 5;
 
@@ -34,10 +35,27 @@ const fieldSx = {
 };
 
 // الـ instructor ممكن يرجع string أو object ({ name, image }) حسب الـ backend
-const getInstructorName = (instructor) =>
-  typeof instructor === "string" ? instructor : (instructor?.name ?? "");
+const getInstructorName = (
+  instructor: string | { name?: string } | null | undefined,
+) => (typeof instructor === "string" ? instructor : (instructor?.name ?? ""));
+interface UploadCourseProps {
+  activeCourse: {
+    _id: string;
+    title: string;
+    description: string;
+    category: string;
+    level: string;
+    instructor: string | { name?: string };
+    status: string;
+    thumbnail: string;
+  };
+  onClose?: () => void;
+}
 
-export default function UploadCourse({ activeCourse, onClose }) {
+export default function UploadCourse({
+  activeCourse,
+  onClose,
+}: UploadCourseProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isEdit = Boolean(activeCourse);
@@ -52,7 +70,7 @@ export default function UploadCourse({ activeCourse, onClose }) {
   });
 
   // الملف الحقيقي (للرفع) منفصل عن رابط المعاينة (للعرض بس)
-  const [thumbnailFile, setThumbnailFile] = useState(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState(activeCourse?.thumbnail ?? null);
 
   useEffect(() => {
@@ -62,14 +80,14 @@ export default function UploadCourse({ activeCourse, onClose }) {
     return () => URL.revokeObjectURL(url); // تنضيف الذاكرة
   }, [thumbnailFile]);
 
-  const setField = (field, value) =>
+  const setField = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   // لو الصفحة مفتوحة جوه CourseLibrary بنقفلها بـ onClose، غير كده بنرجع لـ /courses
   const close = () => (onClose ? onClose() : navigate("/courses"));
 
   const courseMutation = useMutation({
-    mutationFn: async (body) => {
+    mutationFn: async (body: FormData) => {
       const res = await api.request({
         method: isEdit ? "patch" : "post",
         url: `/api/courses/${isEdit ? activeCourse._id : ""}`,
@@ -83,17 +101,21 @@ export default function UploadCourse({ activeCourse, onClose }) {
       close();
     },
     onError: (error) => {
-      if (error.response?.data?.message === "jwt expired") {
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.data?.message === "jwt expired"
+      ) {
         localStorage.removeItem("token");
         toast.error("انتهت صلاحية الجلسة، سجل الدخول مرة أخرى");
         navigate("/");
         return;
+      } else if (axios.isAxiosError(error)) {
+        toast.error(error.response?.data?.message || "حصل خطأ");
       }
-      toast.error(error.response?.data?.message || "حصل خطأ");
     },
   });
 
-  const handleThumbnail = (e) => {
+  const handleThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // عشان نقدر نختار نفس الملف تاني
     if (!file) return;
@@ -109,7 +131,7 @@ export default function UploadCourse({ activeCourse, onClose }) {
     setThumbnailFile(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!form.title.trim() || !form.description.trim()) {
       toast.error("اكمل الحقول الأساسية الأول");

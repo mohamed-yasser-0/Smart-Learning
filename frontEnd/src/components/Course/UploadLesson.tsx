@@ -37,6 +37,7 @@ import {
   buildArticlePrompt,
   buildQuizPrompt,
 } from "../../utils/lessonPrompts";
+import axios from "axios";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -85,12 +86,44 @@ const TYPE_TEXT = {
 };
 
 // الـ AI ساعات بيرجّع JSON جوه ```json fences
-const parseAiJson = (raw) =>
-  JSON.parse(String(raw).replace(/```json|```/g, "").trim());
-
+const parseAiJson = (raw: string) =>
+  JSON.parse(
+    String(raw)
+      .replace(/```json|```/g, "")
+      .trim(),
+  );
+interface Question {
+  text: string;
+  options: string[];
+  correctIndex: number;
+}
+const queryClient = useQueryClient();
+interface Data {
+  title: string;
+  order: number;
+  type: keyof typeof TYPE_TEXT;
+  vUrl: string;
+  articleContent: string;
+  questions: Question[];
+}
 // ---------------------------------------------------------------------------
 // Question editor
 // ---------------------------------------------------------------------------
+interface QuestionEdInter {
+  question: {
+    text: string;
+    correctIndex: number;
+    options: [];
+  };
+  index: number;
+  canRemove: boolean;
+  onRemove: () => void;
+  onText: (value: string) => void;
+  onOptionText: (oIndex: number, value: string) => void;
+  onAddOption: () => void;
+  onRemoveOption: (oIndex: number) => void;
+  onCorrect: (value: number) => void;
+}
 function QuestionEditor({
   question,
   index,
@@ -101,7 +134,7 @@ function QuestionEditor({
   onAddOption,
   onRemoveOption,
   onCorrect,
-}) {
+}: QuestionEdInter) {
   return (
     <Box
       sx={{
@@ -197,12 +230,12 @@ function QuestionEditor({
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
+
 export default function UploadLesson() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Data>({
     title: "",
     order: 1,
     type: "video",
@@ -210,21 +243,25 @@ export default function UploadLesson() {
     articleContent: "",
     questions: [emptyQuestion()],
   });
-
+  interface quizSettingsinter {
+    questionsCount: number;
+    articleInstructions: string;
+  }
   const [openGenerateDialog, setOpenGenerateDialog] = useState(false);
-  const [selectedLessonIds, setSelectedLessonIds] = useState([]);
-  const [quizSettings, setQuizSettings] = useState({
+  const [selectedLessonIds, setSelectedLessonIds] = useState<string[]>([]);
+  const [quizSettings, setQuizSettings] = useState<quizSettingsinter>({
     questionsCount: 5,
     articleInstructions: DEFAULT_ARTICLE_INSTRUCTIONS,
   });
 
-  const isQuiz = formData.type === "quiz";
-  const isArticle = formData.type === "article";
+  const isQuiz = formData?.type === "quiz";
+  const isArticle = formData?.type === "article";
   const isVideo = !isQuiz && !isArticle;
-  const text = TYPE_TEXT[formData.type];
+  const text = TYPE_TEXT[formData?.type];
 
-  const setField = (field, value) =>
+  const setField = (field: keyof Data, value: string | number): void => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   // ---- الدروس الموجودة (مصدر المحتوى للتوليد التلقائي) ----
   const { data } = useQuery({
@@ -234,15 +271,15 @@ export default function UploadLesson() {
   });
   const lessonsData = useMemo(() => data?.data?.lesson ?? [], [data]);
 
-  const selectedLessons = lessonsData.filter((l) =>
+  const selectedLessons = lessonsData.filter((l: { _id: string }) =>
     selectedLessonIds.includes(l._id),
   );
   const lessonContent = selectedLessons
-    .map((l) => l.video?.text)
+    .map((l: { video: { text: string } }) => l.video?.text)
     .filter(Boolean)
     .join("\n\n");
 
-  const toggleLesson = (lessonId) =>
+  const toggleLesson = (lessonId: string) =>
     setSelectedLessonIds((prev) =>
       prev.includes(lessonId)
         ? prev.filter((l) => l !== lessonId)
@@ -251,7 +288,7 @@ export default function UploadLesson() {
 
   // ---- AI generation ----
   const generateMutation = useMutation({
-    mutationFn: async (summary) =>
+    mutationFn: async (summary: string) =>
       (await api.post("/api/ai/Summarize", { summary })).data,
     onSuccess: (res) => {
       try {
@@ -262,11 +299,17 @@ export default function UploadLesson() {
             ...prev,
             type: "quiz",
             title: g.title ?? prev.title,
-            questions: g.questions.map((q) => ({
-              text: q.question,
-              options: q.options,
-              correctIndex: Math.max(0, q.options.indexOf(q.correctAnswer)),
-            })),
+            questions: g.questions.map(
+              (q: {
+                question: string;
+                options: string[];
+                correctAnswer: string;
+              }) => ({
+                text: q.question,
+                options: q.options,
+                correctIndex: Math.max(0, q.options.indexOf(q.correctAnswer)),
+              }),
+            ),
           }));
         } else if (g.type === "article" && g.articleContent) {
           setFormData((prev) => ({
@@ -284,7 +327,11 @@ export default function UploadLesson() {
       }
     },
     onError: (err) =>
-      toast.error(err.response?.data?.message || "فشل التوليد التلقائي"),
+      toast.error(
+        axios.isAxiosError(err)
+          ? err.response?.data?.message || "فشل التوليد التلقائي"
+          : "حصل خطأ",
+      ),
   });
 
   const handleGenerate = () => {
@@ -297,21 +344,33 @@ export default function UploadLesson() {
 
   // ---- Submit ----
   const lessonMutation = useMutation({
-    mutationFn: async (payload) =>
-      (await api.post(`/api/lessons/${courseId}`, payload)).data,
+    mutationFn: async (payload: {
+      questions?: {
+        question: string;
+        options: string[];
+        correctAnswer: string;
+      }[];
+      articleContent?: string;
+      video?: { url: string; provider: string };
+    }) => (await api.post(`/api/lessons/${courseId}`, payload)).data,
     onSuccess: () => {
       toast.success(text.success);
       queryClient.invalidateQueries({ queryKey: ["lessons", courseId] });
       navigate(-1);
     },
     onError: (err) => {
-      if (err.response?.data?.message === "jwt expired") {
+      if (
+        axios.isAxiosError(err) &&
+        err.response?.data?.message === "jwt expired"
+      ) {
         localStorage.removeItem("token");
         toast.error("انتهت صلاحية الجلسة، سجل الدخول مرة أخرى");
         navigate("/");
         return;
       }
-      toast.error(err.response?.data?.message || "حصل خطأ");
+      toast.error(
+        (axios.isAxiosError(err) && err.response?.data?.message) || "حصل خطأ",
+      );
     },
   });
 
@@ -336,7 +395,7 @@ export default function UploadLesson() {
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
 
     const errorMessage = validate();
@@ -375,12 +434,10 @@ export default function UploadLesson() {
   };
 
   // ---- Quiz helpers ----
-  const updateQuestion = (qIndex, updater) =>
+  const updateQuestion = (qIndex: number, updater: (q: Question) => Question) =>
     setFormData((prev) => ({
       ...prev,
-      questions: prev.questions.map((q, i) =>
-        i === qIndex ? updater(q) : q,
-      ),
+      questions: prev.questions.map((q, i) => (i === qIndex ? updater(q) : q)),
     }));
 
   const addQuestion = () =>
@@ -389,13 +446,13 @@ export default function UploadLesson() {
       questions: [...prev.questions, emptyQuestion()],
     }));
 
-  const removeQuestion = (qIndex) =>
+  const removeQuestion = (qIndex: number) =>
     setFormData((prev) => ({
       ...prev,
       questions: prev.questions.filter((_, i) => i !== qIndex),
     }));
 
-  const removeOption = (qIndex, oIndex) =>
+  const removeOption = (qIndex: number, oIndex: number) =>
     updateQuestion(qIndex, (q) => ({
       ...q,
       options: q.options.filter((_, oi) => oi !== oIndex),
@@ -464,7 +521,11 @@ export default function UploadLesson() {
         }}
       >
         {/* Top bar */}
-        <Stack direction="row" spacing={1.5} sx={{ alignItems: "center", mb: 3 }}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{ alignItems: "center", mb: 3 }}
+        >
           <IconButton
             aria-label="رجوع"
             onClick={() => navigate(-1)}
@@ -583,14 +644,18 @@ export default function UploadLesson() {
                       size="small"
                       onClick={addQuestion}
                       startIcon={<AddCircleOutlineRounded fontSize="small" />}
-                      sx={{ textTransform: "none", borderRadius: "10px", fontWeight: 600 }}
+                      sx={{
+                        textTransform: "none",
+                        borderRadius: "10px",
+                        fontWeight: 600,
+                      }}
                     >
                       إضافة سؤال
                     </Button>
                   </Stack>
 
                   <Stack spacing={3}>
-                    {formData.questions.map((q, qIndex) => (
+                    {formData.questions.map((q: any, qIndex) => (
                       <QuestionEditor
                         key={qIndex}
                         question={q}
@@ -614,7 +679,9 @@ export default function UploadLesson() {
                             options: [...x.options, ""],
                           }))
                         }
-                        onRemoveOption={(oIndex) => removeOption(qIndex, oIndex)}
+                        onRemoveOption={(oIndex) =>
+                          removeOption(qIndex, oIndex)
+                        }
                         onCorrect={(oIndex) =>
                           updateQuestion(qIndex, (x) => ({
                             ...x,
@@ -781,10 +848,18 @@ export default function UploadLesson() {
                 اختر الدروس التي تريد أن يعتمد عليها المحتوى
               </Typography>
 
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                sx={{ flexWrap: "wrap" }}
+              >
                 {lessonsData
-                  .filter((lesson) => lesson.video?.text)
-                  .map((lesson) => {
+                  .filter(
+                    (lesson: { video?: { text?: string } }) =>
+                      lesson?.video?.text,
+                  )
+                  .map((lesson: { _id: string; title: string }) => {
                     const selected = selectedLessonIds.includes(lesson._id);
                     return (
                       <Chip

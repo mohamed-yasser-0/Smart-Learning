@@ -33,6 +33,7 @@ import toast from "react-hot-toast";
 import { jwtDecode } from "jwt-decode";
 // نفس الـ axios instance المستخدم في CourseLibrary (انقله لملف مشترك)
 import { api } from "../../api/client";
+import axios, { Axios } from "axios";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -46,19 +47,39 @@ const INITIAL_MESSAGES = [
     text: "أهلاً! أنا مساعدك الذكي، اسألني عن أي شيء وسأحاول مساعدتك.",
   },
 ];
+interface Course {
+  userId: { _id: string };
+  _id: string;
+  title: string;
+  description: string;
+  thumbnail: string;
+  instructor?: { name: string; image?: string };
+  createdAt?: string;
+  progress?: number;
+  progressColor?: string;
+  duration: number;
+  students: number;
+  rating: number;
+}
 
+type DecodedUser = {
+  id?: string;
+  _id?: string;
+  [key: string]: unknown;
+};
 function getUserFromToken() {
   try {
     const token = localStorage.getItem("token");
-    return token ? jwtDecode(token) : null;
+    const decoded = token ? jwtDecode(token) : null;
+    return decoded as DecodedUser | null;
   } catch {
     return null;
   }
 }
 
-const getOwnerId = (course) => course?.userId?._id ?? course?.userId;
+const getOwnerId = (course: Course) => course?.userId?._id ?? course?.userId;
 
-function getYouTubeId(url) {
+function getYouTubeId(url: string) {
   try {
     const u = new URL(url);
     if (u.hostname.includes("youtu.be")) return u.pathname.slice(1) || null;
@@ -70,7 +91,7 @@ function getYouTubeId(url) {
   }
 }
 
-const typeIcon = (type, done) => {
+const typeIcon = (type: string, done: boolean) => {
   if (done) {
     return <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />;
   }
@@ -88,7 +109,11 @@ const typeIcon = (type, done) => {
 // ---------------------------------------------------------------------------
 // Small presentational components
 // ---------------------------------------------------------------------------
-function UploadLessonButton({ onClick, isMobile }) {
+interface UploadLessonButtonProps {
+  onClick: () => void;
+  isMobile: boolean;
+}
+function UploadLessonButton({ onClick, isMobile }: UploadLessonButtonProps) {
   return (
     <Button
       variant="contained"
@@ -110,8 +135,14 @@ function UploadLessonButton({ onClick, isMobile }) {
     </Button>
   );
 }
+interface LessonHeaderProps {
+  lesson: {
+    order: number;
+    title: string;
+  };
+}
 
-function LessonHeader({ lesson }) {
+function LessonHeader({ lesson }: LessonHeaderProps) {
   return (
     <Box sx={{ mb: 3 }}>
       <Typography
@@ -138,8 +169,12 @@ function LessonHeader({ lesson }) {
     </Box>
   );
 }
-
-function MetaItem({ icon, value, color = "text.secondary" }) {
+interface LessonMetaprops {
+  icon: React.ReactNode;
+  value: string | number;
+  color?: string;
+}
+function MetaItem({ icon, value, color = "text.secondary" }: LessonMetaprops) {
   if (value === undefined || value === null || value === "") return null;
   return (
     <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
@@ -148,8 +183,10 @@ function MetaItem({ icon, value, color = "text.secondary" }) {
     </Stack>
   );
 }
-
-function CourseMeta({ course }) {
+interface CourseMetaProps {
+  course: Course | null;
+}
+function CourseMeta({ course }: CourseMetaProps) {
   if (!course) return null;
   const name =
     typeof course.instructor === "string"
@@ -198,8 +235,16 @@ function CourseMeta({ course }) {
     </Stack>
   );
 }
-
-function VideoPlayer({ lesson }) {
+interface LessonData {
+  _id: string;
+  order: number;
+  title: string;
+  video?: {
+    url: string;
+    text?: string;
+  };
+}
+function VideoPlayer({ lesson }: { lesson: LessonData }) {
   const video = lesson.video;
 
   if (!video?.url) {
@@ -230,8 +275,20 @@ function VideoPlayer({ lesson }) {
     />
   );
 }
-
-function LessonNav({ hasPrev, onPrev, onComplete, done, pending }) {
+interface LessonNavProps {
+  hasPrev: boolean;
+  onPrev: () => void;
+  onComplete: () => void;
+  done: boolean;
+  pending: boolean;
+}
+function LessonNav({
+  hasPrev,
+  onPrev,
+  onComplete,
+  done,
+  pending,
+}: LessonNavProps) {
   return (
     <>
       <Divider sx={{ my: 3 }} />
@@ -277,21 +334,21 @@ function LessonNav({ hasPrev, onPrev, onComplete, done, pending }) {
 // ---------------------------------------------------------------------------
 // AI chat (lesson summary)
 // ---------------------------------------------------------------------------
-function ChatPanel({ lesson }) {
+function ChatPanel({ lesson }: { lesson: LessonData }) {
   const theme = useTheme();
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [summaries, setSummaries] = useState(0);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const addMessage = (role, text) =>
+  const addMessage = (role: string, text: string) =>
     setMessages((prev) => [
       ...prev,
       { id: `${Date.now()}-${Math.random()}`, role, text },
     ]);
 
   const chatMutation = useMutation({
-    mutationFn: async (summary) => {
+    mutationFn: async (summary: string) => {
       const res = await api.post("/api/ai/Summarize", { summary });
       return res.data;
     },
@@ -300,7 +357,9 @@ function ChatPanel({ lesson }) {
     onError: (err) =>
       addMessage(
         "bot",
-        err.response?.data?.message || "حصل خطأ، حاول مرة أخرى.",
+        axios.isAxiosError(err)
+          ? err.response?.data?.message || "حصل خطأ، حاول مرة أخرى."
+          : "حصل خطأ، حاول مرة أخرى.",
       ),
   });
 
@@ -311,7 +370,7 @@ function ChatPanel({ lesson }) {
     });
   }, [messages, chatMutation.isPending]);
 
-  const send = (text, label) => {
+  const send = (text: string, label?: string) => {
     const trimmed = text.trim();
     if (!trimmed || chatMutation.isPending) return;
     addMessage("user", label ?? trimmed);
@@ -520,12 +579,22 @@ function ChatPanel({ lesson }) {
 // ---------------------------------------------------------------------------
 // Quiz — state بيتصفر لوحده لما الدرس يتغير (key={lesson._id} عند الاستخدام)
 // ---------------------------------------------------------------------------
-function QuizView({ lesson, savedScore, saving, onFinish }) {
+interface QuizViewProps {
+  lesson: LessonData & { questions?: any[] };
+  savedScore?: [number, number, number];
+  saving?: boolean;
+  onFinish: (score: [number, number, number]) => Promise<void>;
+}
+function QuizView({ lesson, savedScore, saving, onFinish }: QuizViewProps) {
   const questions = lesson.questions ?? [];
   const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState(null);
-  const [answers, setAnswers] = useState([]);
-  const [localResult, setLocalResult] = useState(null);
+  const [selected, setSelected] = useState<boolean | null>(null);
+  const [answers, setAnswers] = useState<(boolean | null)[]>([]);
+  const [localResult, setLocalResult] = useState<null | {
+    score: number;
+    total: number;
+    percentage: number;
+  }>(null);
 
   const result =
     localResult ??
@@ -561,8 +630,7 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
         >
           <Typography
             variant="h4"
-            fontWeight={800}
-            sx={{ fontSize: { xs: 24, sm: 30 }, mb: 2 }}
+            sx={{ fontSize: { xs: 24, sm: 30 }, mb: 2, fontWeight: 800 }}
           >
             🎉 Quiz Finished
           </Typography>
@@ -577,10 +645,10 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
           >
             {result.score} / {result.total}
           </Typography>
-          <Typography variant="h6" fontWeight={700} sx={{ mb: 1 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
             {result.percentage}%
           </Typography>
-          <Typography sx={{ color: "text.secondary" }}>
+          <Typography sx={{ color: "text.secondary", fontWeight: 700 }}>
             You answered {result.score} out of {result.total} questions
             correctly.
           </Typography>
@@ -596,7 +664,7 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
               p: { xs: 2.5, sm: 4 },
             }}
           >
-            <Typography variant="h6" fontWeight={800} sx={{ mb: 3 }}>
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 800 }}>
               Review Answers
             </Typography>
             <Stack spacing={2.5}>
@@ -617,7 +685,7 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
                         : "rgba(211,47,47,0.06)",
                     }}
                   >
-                    <Typography fontWeight={700} sx={{ mb: 1.5 }}>
+                    <Typography sx={{ mb: 1.5, fontWeight: 800 }}>
                       {index + 1}. {q.question}
                     </Typography>
                     <Typography
@@ -678,15 +746,19 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
     <Box sx={{ maxWidth: 600, mx: "auto" }}>
       <Typography
         variant="h5"
-        fontWeight={800}
-        sx={{ fontSize: { xs: 20, sm: 24 } }}
+        sx={{ fontSize: { xs: 20, sm: 24 }, fontWeight: 800 }}
       >
         {lesson.title}
       </Typography>
       <Typography
         variant="body2"
-        fontFamily="monospace"
-        sx={{ color: "text.secondary", mt: 0.5, mb: 2 }}
+        sx={{
+          color: "text.secondary",
+          mt: 0.5,
+          mb: 2,
+          fontWeight: 700,
+          fontFamily: "monospace",
+        }}
       >
         Question {current + 1} of {questions.length}
       </Typography>
@@ -707,14 +779,13 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
       >
         <Typography
           variant="h6"
-          fontWeight={700}
-          sx={{ mb: 3, fontSize: { xs: 16, sm: 18 } }}
+          sx={{ mb: 3, fontSize: { xs: 16, sm: 18 }, fontWeight: 800 }}
         >
           {question.question}
         </Typography>
 
         <Stack spacing={2}>
-          {question.options.map((option, index) => {
+          {question.options.map((option: boolean, index: number) => {
             const isSelected = selected === option;
             return (
               <Box
@@ -762,13 +833,15 @@ function QuizView({ lesson, savedScore, saving, onFinish }) {
                 >
                   <Typography
                     variant="caption"
-                    fontWeight={700}
-                    sx={{ color: isSelected ? "#fff" : "#9B8CFF" }}
+                    sx={{
+                      color: isSelected ? "#fff" : "#9B8CFF",
+                      fontWeight: 700,
+                    }}
                   >
                     {String.fromCharCode(65 + index)}
                   </Typography>
                 </Box>
-                <Typography fontWeight={500}>{option}</Typography>
+                <Typography sx={{ fontWeight: 500 }}>{option}</Typography>
               </Box>
             );
           })}
@@ -843,12 +916,14 @@ export default function CourseLessons() {
   });
 
   const progressMutation = useMutation({
-    mutationFn: async (payload) =>
+    mutationFn: async (payload: { lessonId: string; quizScore?: number[] }) =>
       (await api.post(`/api/progress/${id}`, payload)).data,
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["progress", id] }),
     onError: (err) =>
-      toast.error(err.response?.data?.message || "تعذر حفظ التقدم"),
+      axios.isAxiosError(err)
+        ? toast.error(err.response?.data?.message || "تعذر حفظ التقدم")
+        : "حصل خطأ حاول مره اخري",
   });
 
   // ---- Derived ----
@@ -860,12 +935,15 @@ export default function CourseLessons() {
 
   const progressList = progressQuery.data?.data?.progres;
   const completedLessons = useMemo(
-    () => new Set((progressList ?? []).map((p) => p.lessonId)),
+    () =>
+      new Set(
+        (progressList ?? []).map((p: { lessonId: string }) => p.lessonId),
+      ),
     [progressList],
   );
 
   const activeCourse = courseQuery.data?.data?.course?.find(
-    (c) => c._id === id,
+    (c: { _id: string }) => c._id === id,
   );
   const isOwner = Boolean(userId) && getOwnerId(activeCourse) === userId;
 
@@ -878,7 +956,7 @@ export default function CourseLessons() {
     completedLessons.has(l._id),
   ).length;
   const savedScore = progressList?.find(
-    (p) => p.lessonId === activeLesson?._id,
+    (p: { lessonId: string }) => p.lessonId === activeLesson?._id,
   )?.quizScore;
 
   // ---- Handlers ----
@@ -895,7 +973,7 @@ export default function CourseLessons() {
     }
   };
 
-  const handleQuizFinish = (quizScore) =>
+  const handleQuizFinish = (quizScore: number[]) =>
     progressMutation.mutateAsync({ lessonId: activeLesson._id, quizScore });
 
   const goPrev = () => {
@@ -916,8 +994,12 @@ export default function CourseLessons() {
       <Box sx={{ p: 4 }}>
         <Alert severity="error">
           حصل خطأ:{" "}
-          {lessonsQuery.error.response?.data?.message ||
-            lessonsQuery.error.message}
+          {axios.isAxiosError(lessonsQuery.error)
+            ? lessonsQuery.error.response?.data?.message ||
+              lessonsQuery.error.message
+            : lessonsQuery.error instanceof Error
+              ? lessonsQuery.error.message
+              : "Something went wrong"}
         </Alert>
       </Box>
     );
@@ -1178,9 +1260,6 @@ export default function CourseLessons() {
                         lesson.type === "video"
                           ? "rgba(0,191,165,0.12)"
                           : "action.hover",
-                    },
-                    "&:hover": {
-                      bgcolor: isActive ? "action.selected" : "action.hover",
                     },
                   }}
                 >

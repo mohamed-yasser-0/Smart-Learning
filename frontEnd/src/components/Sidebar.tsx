@@ -10,7 +10,7 @@ import {
   Chip,
   IconButton,
 } from "@mui/material";
-import React, { useState } from "react";
+import React, { useState, type ReactNode } from "react";
 import SchoolSharpIcon from "@mui/icons-material/SchoolSharp";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
@@ -22,7 +22,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import CloseIcon from "@mui/icons-material/Close";
 import MenuIcon from "@mui/icons-material/Menu";
 import { jwtDecode } from "jwt-decode";
-const menuItems = [
+interface MenuItem {
+  id: string;
+  label: string;
+  path: string;
+  icon: ReactNode;
+  badge?: string;
+}
+const menuItems: MenuItem[] = [
   {
     id: "dashboard",
     label: "Dashboard",
@@ -55,10 +62,25 @@ const menuItems = [
     badge: "AI",
   },
 ];
-
-export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
+interface SidebarProps {
+  sideBar: boolean;
+  setsideBar(mode: boolean): void;
+  mode: string;
+  setMode(mode: string): void;
+}
+interface UserPayload {
+  firstName: string;
+  username: string;
+  email: string;
+}
+export default function Sidebar({
+  sideBar,
+  setsideBar,
+  mode,
+  setMode,
+}: SidebarProps) {
   const token = localStorage.getItem("token");
-  const user = token ? jwtDecode(token) : null;
+  const user = token ? jwtDecode<UserPayload>(token) : null;
   const [selected, setSelected] = useState("dashboard");
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,7 +94,7 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
   function LightDark() {
     return (
       <button
-        onClick={() => setMode(mode === "dark" ? "light" : "dark")}
+        onClick={() => setMode(mode === "Dark" ? "light" : "Dark")}
         style={{
           width: "48px",
           height: "26px",
@@ -80,12 +102,12 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
           border: "none",
           cursor: "pointer",
           background:
-            mode === "dark"
+            mode === "Dark"
               ? "linear-gradient(135deg, #1e293b, #475569)"
               : "linear-gradient(135deg, #fbbf24, #fde68a)",
           display: "flex",
           alignItems: "center",
-          justifyContent: mode === "dark" ? "flex-end" : "flex-start",
+          justifyContent: mode === "Dark" ? "flex-end" : "flex-start",
           padding: "3px",
           transition: "0.3s ease",
           boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
@@ -96,7 +118,7 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
             width: "20px",
             height: "20px",
             borderRadius: "50%",
-            background: mode === "dark" ? "#0f172a" : "#fff",
+            background: mode === "Dark" ? "#0f172a" : "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -104,7 +126,7 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
             transition: "0.3s ease",
           }}
         >
-          {mode === "dark" ? "🌙" : "☀️"}
+          {mode === "Dark" ? "🌙" : "☀️"}
         </div>
       </button>
     );
@@ -325,9 +347,13 @@ export default function Sidebar({ sideBar, setsideBar, mode, setMode }) {
               </ListItemIcon>
               <ListItemText
                 primary={item.label}
-                primaryTypographyProps={{
-                  fontWeight: selected === item.id ? 600 : 500,
-                  fontSize: "0.85rem", // أصغر
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontWeight: selected === item.id ? 600 : 500,
+                      fontSize: "0.85rem",
+                    },
+                  },
                 }}
               />
               {item.badge && (

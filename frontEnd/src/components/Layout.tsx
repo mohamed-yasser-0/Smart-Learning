@@ -3,10 +3,13 @@ import { Outlet, useLocation } from "react-router-dom";
 import { Box } from "@mui/material";
 import Sidebar from "./Sidebar";
 import ChatBot from "./chatBot";
-
-const Layout = ({ setMode, mode }) => {
+interface AppProps {
+  mode: string;
+  setMode(mode: string): void;
+}
+const Layout = ({ setMode, mode }: AppProps) => {
   const [sideBar, setsideBar] = useState(false);
-  const contentRef = useRef(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
 
   // الصفحات بتتعرض جوه div له scroll خاص، فلازم نرجّعه لفوق عند تغيير الصفحة

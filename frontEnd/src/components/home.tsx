@@ -30,6 +30,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 import { api } from "../api/client";
+import axios from "axios";
 
 // ---------------------------------------------------------------------------
 // Constants & helpers
@@ -46,7 +47,7 @@ const cardSx = {
   height: "100%",
 };
 
-function getUserFromToken() {
+function getUserFromToken(): { username: string; email: string } | null {
   try {
     const token = localStorage.getItem("token");
     return token ? jwtDecode(token) : null;
@@ -62,13 +63,13 @@ const getGreeting = () => {
   return "Good evening";
 };
 
-const toDayKey = (value) => {
+const toDayKey = (value: string | Date) => {
   const d = new Date(value);
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 
 // عدد الأيام المتتالية اللي المستخدم خلّص فيها درس (اليوم أو لحد امبارح)
-function calcStreak(progress) {
+function calcStreak(progress: { createdAt: string | Date }[]) {
   const days = new Set(progress.map((p) => toDayKey(p.createdAt)));
   const cursor = new Date();
   if (!days.has(toDayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
@@ -82,8 +83,10 @@ function calcStreak(progress) {
 }
 
 // آخر 7 أيام (الأيام الفاضية بتظهر بصفر)
-function buildWeeklyData(progress) {
-  const minutesByDay = {};
+function buildWeeklyData(
+  progress: { createdAt: string | Date; duration?: number }[],
+) {
+  const minutesByDay: Record<string, number> = {};
   progress.forEach((p) => {
     const key = toDayKey(p.createdAt);
     minutesByDay[key] = (minutesByDay[key] ?? 0) + (p.duration ?? 0);
@@ -104,13 +107,17 @@ function buildWeeklyData(progress) {
   });
 }
 
-const formatShortDate = (d) =>
+const formatShortDate = (d: Date) =>
   d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 
 // ---------------------------------------------------------------------------
 // Presentational components
 // ---------------------------------------------------------------------------
-function MultiRingProgress({ rings }) {
+function MultiRingProgress({
+  rings,
+}: {
+  rings: { label: string; value: number; color: string }[];
+}) {
   const theme = useTheme();
   const size = 130;
   const stroke = 9;
@@ -158,7 +165,17 @@ function MultiRingProgress({ rings }) {
   );
 }
 
-function StatCard({ icon, value, label, color }) {
+function StatCard({
+  icon,
+  value,
+  label,
+  color,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  label: string;
+  color: string;
+}) {
   return (
     <Card
       sx={{
@@ -240,15 +257,24 @@ export default function Home() {
   const mycourses = mycoursesQuery.data?.data?.course;
   const allCourses = [...(courses ?? []), ...(mycourses ?? [])];
   const progress = progressQuery.data?.data?.progres;
-
+  interface Progress {
+    quizScore: number[] | null;
+    duration: number;
+  }
   // ---- الإحصائيات ----
   const stats = useMemo(() => {
     const list = progress ?? [];
-    const totalMinutes = list.reduce((sum, p) => sum + (p.duration ?? 0), 0);
-    const quizzes = list.filter((p) => p.quizScore?.length > 0);
-    const lessonsDone = list.filter((p) => !p.quizScore?.length);
+    const totalMinutes = list.reduce(
+      (sum: number, p: Progress) => sum + (p.duration ?? 0),
+      0,
+    );
+    const quizzes = list.filter(
+      (p: Progress) => p.quizScore !== null && p.quizScore.length > 0,
+    );
+    const lessonsDone = list.filter((p: Progress) => !p.quizScore?.length);
     const quizTotal = quizzes.reduce(
-      (sum, p) => sum + (p.quizScore[2] ?? 0),
+      (sum: number, p: Progress) =>
+        p.quizScore !== null && sum + (p.quizScore[2] ?? 0),
       0,
     );
 
@@ -264,9 +290,12 @@ export default function Home() {
   // ---- الكورسات اللي المستخدم بدأها (الأحدث نشاطاً أولاً) ----
   const started = useMemo(() => {
     if (!allCourses || !progress) return [];
-    const orderedIds = [];
+    const orderedIds: number[] | null = [];
     [...progress]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .sort(
+        (a: { createdAt: string }, b: { createdAt: string }) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
       .forEach((p) => {
         if (p.courseId && !orderedIds.includes(p.courseId))
           orderedIds.push(p.courseId);
@@ -293,8 +322,10 @@ export default function Home() {
     );
     const doneIds = new Set(
       (progress ?? [])
-        .filter((p) => p.courseId === course._id)
-        .map((p) => p.lessonId),
+        .filter((p: { courseId: string }) => p.courseId === course._id)
+        .map((p: { lessonId: string }) => {
+          return p.lessonId;
+        }),
     );
     const percent = lessons.length
       ? Math.round((doneIds.size / lessons.length) * 100)
@@ -327,11 +358,14 @@ export default function Home() {
 
   if (isError) {
     const err = progressQuery.error ?? coursesQuery.error;
+    const errorMessage = axios.isAxiosError(err)
+      ? err.response?.data?.message || err.message
+      : err instanceof Error
+        ? err.message
+        : "Something went wrong";
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">
-          حصل خطأ: {err.response?.data?.message || err.message}
-        </Alert>
+        <Alert severity="error">حصل خطأ: {errorMessage}</Alert>
       </Container>
     );
   }

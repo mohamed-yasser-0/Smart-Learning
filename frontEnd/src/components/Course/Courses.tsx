@@ -32,23 +32,30 @@ import { jwtDecode } from "jwt-decode";
 import UploadCourse from "./UploadCourse";
 import ConfirmDialog from "../DeleteCourseDialog";
 import { api } from "../../api/client";
+import axios from "axios";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 const TABS = ["My Courses", "All Courses"];
 
-const formatDate = (value) =>
+const formatDate = (value: string | Date) =>
   new Date(value).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
 
-function getUserFromToken() {
+type DecodedUser = {
+  id?: string;
+  _id?: string;
+  [key: string]: unknown;
+};
+
+function getUserFromToken(): DecodedUser | null {
   try {
     const token = localStorage.getItem("token");
-    return token ? jwtDecode(token) : null;
+    return token ? jwtDecode<DecodedUser>(token) : null;
   } catch {
     return null;
   }
@@ -84,11 +91,53 @@ function CoursesSkeleton() {
 // ---------------------------------------------------------------------------
 // Course card
 // ---------------------------------------------------------------------------
-function CourseCard({ course, isOwner, onEdit, onDelete, onOpen }) {
+// interface Course {
+//   userId: { _id: string };
+//   _id: string;
+//   title: string;
+//   description: string;
+//   thumbnail: string;
+
+//   createdAt?: string;
+//   progress?: number;
+//   progressColor?: string;
+// }
+interface Course {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  level: string;
+  status: string;
+  thumbnail: string;
+  instructor: {
+    name: string;
+    image?: string;
+  };
+  createdAt?: string;
+  progress?: number;
+  progressColor?: string;
+  userId?: { _id: string };
+}
+
+interface CourseCardProps {
+  course: Course;
+  isOwner: boolean;
+  onEdit: (course: Course) => void;
+  onDelete: (course: Course) => void;
+  onOpen: (id: string) => void;
+}
+function CourseCard({
+  course,
+  isOwner,
+  onEdit,
+  onDelete,
+  onOpen,
+}: CourseCardProps) {
   const instructorName =
     (typeof course.instructor === "string"
       ? course.instructor
-      : course.instructor) || "Instructor";
+      : course.instructor?.name) || "Instructor";
 
   return (
     <Card
@@ -182,9 +231,9 @@ function CourseCard({ course, isOwner, onEdit, onDelete, onOpen }) {
         <Box>
           <Typography
             variant="h6"
-            fontWeight={700}
             color="#fff"
             sx={{
+              fontWeight: 700,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -223,8 +272,7 @@ function CourseCard({ course, isOwner, onEdit, onDelete, onOpen }) {
           <Stack
             direction="row"
             spacing={1}
-            minWidth={0}
-            sx={{ alignItems: "center" }}
+            sx={{ alignItems: "center", minWidth: 0 }}
           >
             <Avatar
               src={course.instructor?.image}
@@ -275,8 +323,10 @@ function CourseCard({ course, isOwner, onEdit, onDelete, onOpen }) {
               </Typography>
               <Typography
                 variant="caption"
-                fontWeight={700}
-                sx={{ color: course.progressColor || "primary.main" }}
+                sx={{
+                  color: course.progressColor || "primary.main",
+                  fontWeight: 700,
+                }}
               >
                 {course.progress}%
               </Typography>
@@ -323,10 +373,10 @@ export default function CourseLibrary() {
   // ---- All hooks live at the top, before any early return ----
   const [showUploadCourse, setShowUploadCourse] = useState(false);
   const [tab, setTab] = useState(0);
-  const [activeCourse, setActiveCourse] = useState(null);
+  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   const navigate = useNavigate();
   const theme = useTheme();
@@ -336,7 +386,7 @@ export default function CourseLibrary() {
   const userId = user?.id ?? user?._id;
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (id: string) => {
       const res = await api.delete(`/api/courses/${id}`);
       return res.data;
     },
@@ -344,8 +394,11 @@ export default function CourseLibrary() {
       toast.success("تم حذف الكورس بنجاح");
       queryClient.invalidateQueries({ queryKey: ["courses"] });
     },
+
     onError: (err) => {
-      toast.error(err.response?.data?.message || "فشل حذف الكورس");
+      axios.isAxiosError(err)
+        ? toast.error(err.response?.data?.message || "فشل حذف الكورس")
+        : toast.error("فشل حذف الكورس");
     },
   });
 
@@ -362,20 +415,22 @@ export default function CourseLibrary() {
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return courses.filter((c) => c.title?.toLowerCase().includes(term));
+    return courses.filter((c: { title: string }) =>
+      c.title?.toLowerCase().includes(term),
+    );
   }, [courses, search]);
 
-  const handleEdit = (course) => {
+  const handleEdit = (course: Course) => {
     setActiveCourse(course);
     setShowUploadCourse(true);
   };
 
-  const handleDelete = (course) => {
+  const handleDelete = (course: Course) => {
     setSelectedCourse(course);
     setDialogOpen(true);
   };
 
-  const isOwner = (course) => {
+  const isOwner = (course: Course) => {
     const ownerId = course.userId?._id ?? course.userId;
     return Boolean(userId) && ownerId === userId;
   };
@@ -408,18 +463,20 @@ export default function CourseLibrary() {
               <CloseRoundedIcon />
             </IconButton>
           </Box>
-          <UploadCourse
-            activeCourse={activeCourse}
-            onClose={() => {
-              setShowUploadCourse(false);
-              setActiveCourse(null);
-            }}
-          />
+          {activeCourse && (
+            <UploadCourse
+              activeCourse={activeCourse}
+              onClose={() => {
+                setShowUploadCourse(false);
+                setActiveCourse(null);
+              }}
+            />
+          )}
         </>
       ) : (
         <Container maxWidth="lg">
           {/* Header */}
-          <Typography variant="h4" fontWeight={800}>
+          <Typography variant="h4" sx={{ fontWeight: 800 }}>
             Course Library
           </Typography>
           <Typography
@@ -526,7 +583,12 @@ export default function CourseLibrary() {
             <CoursesSkeleton />
           ) : isError ? (
             <Alert severity="error">
-              حصل خطأ: {error.response?.data?.message || error.message}
+              حصل خطأ:{" "}
+              {axios.isAxiosError(error)
+                ? error.response?.data?.message || error.message
+                : error instanceof Error
+                  ? error.message
+                  : "Something went wrong"}
             </Alert>
           ) : filtered.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
@@ -546,7 +608,7 @@ export default function CourseLibrary() {
                 gap: 3,
               }}
             >
-              {filtered.map((course) => (
+              {filtered.map((course: Course) => (
                 <CourseCard
                   key={course._id}
                   course={course}
@@ -570,6 +632,7 @@ export default function CourseLibrary() {
         confirmColor="error"
         loading={deleteMutation.isPending}
         onConfirm={() => {
+          if (!selectedCourse) return;
           deleteMutation.mutate(selectedCourse._id);
           setDialogOpen(false);
         }}

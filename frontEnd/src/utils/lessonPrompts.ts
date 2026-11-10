@@ -1,7 +1,10 @@
 export const DEFAULT_ARTICLE_INSTRUCTIONS =
   "الشمولية والدقة أهم من الاختصار. يجب أن يتناسب طول المقال مع حجم الدرس وعمق محتواه؛ فالدرس الطويل يحتاج مقالًا مفصلًا، بينما الدرس القصير يحتاج مقالًا مناسبًا دون إطالة غير ضرورية.";
 
-export const buildQuizPrompt = (questionsCount, lessonContent) => `
+export const buildQuizPrompt = (
+  questionsCount: number,
+  lessonContent: string,
+) => `
 Generate a high-quality multiple-choice quiz based ONLY on the lesson content provided below.
 
 Requirements:
@@ -108,7 +111,10 @@ ${lessonContent}
 
 `;
 
-export const buildArticlePrompt = (instructions, lessonContent) => `
+export const buildArticlePrompt = (
+  instructions: string,
+  lessonContent: string,
+) => `
 Generate a comprehensive, well-organized educational article based ONLY on the lesson content.
 
 Requirements:

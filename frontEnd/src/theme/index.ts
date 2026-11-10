@@ -5,13 +5,9 @@ import darkPalette from "./darkPalette";
 import typography from "./typography";
 import components from "./components";
 
-
-const getTheme = (mode) => {
+const getTheme = (mode: string) => {
   return createTheme({
-
-    palette: mode === "light"
-      ? lightPalette
-      : darkPalette,
+    palette: mode === "Dark" ? darkPalette : lightPalette,
 
     typography,
 
@@ -22,9 +18,7 @@ const getTheme = (mode) => {
     shape: {
       borderRadius: 12,
     },
-
   });
 };
-
 
 export default getTheme;

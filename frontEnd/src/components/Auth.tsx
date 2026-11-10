@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { GoogleLogin } from "@react-oauth/google";
@@ -17,6 +17,7 @@ import {
   Tabs,
   TextField,
   Typography,
+  type TextFieldProps,
 } from "@mui/material";
 import SchoolIcon from "@mui/icons-material/School";
 import LockIcon from "@mui/icons-material/Lock";
@@ -29,6 +30,7 @@ import PsychologyIcon from "@mui/icons-material/Psychology";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { api } from "../api/client";
+import axios from "axios";
 
 // ---------------------------------------------------------------------------
 // Static data & helpers
@@ -57,8 +59,10 @@ const FEATURES = [
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
 
-const getErrorMessage = (error, fallback) =>
-  error.response?.data?.message || fallback;
+const getErrorMessage = (error: unknown, fallback: string): string =>
+  axios.isAxiosError(error)
+    ? error.response?.data?.message || fallback
+    : fallback;
 
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -89,7 +93,17 @@ const tabSx = {
 // ---------------------------------------------------------------------------
 // Reusable pieces
 // ---------------------------------------------------------------------------
-function FormField({ id, label, icon, endAdornment, ...textFieldProps }) {
+type FormFieldProps = TextFieldProps & {
+  icon: ReactNode;
+  endAdornment?: ReactNode;
+};
+function FormField({
+  id,
+  label,
+  icon,
+  endAdornment,
+  ...textFieldProps
+}: FormFieldProps) {
   return (
     <Box sx={{ mb: 2.5 }}>
       <Typography
@@ -287,7 +301,7 @@ export default function LoginPage() {
 
   const isRegister = tab === 1;
 
-  const handleAuthSuccess = (data) => {
+  const handleAuthSuccess = (data: { token: string }) => {
     if (!data?.token) {
       toast.error("Login failed, please try again");
       return;
@@ -295,16 +309,20 @@ export default function LoginPage() {
     localStorage.setItem("token", data.token);
     navigate("/dashboard");
   };
-
+  interface UserData {
+    username?: string;
+    email: string;
+    password: string;
+  }
   const loginMutation = useMutation({
-    mutationFn: async (credentials) =>
+    mutationFn: async (credentials: UserData) =>
       (await api.post("/api/user/logIn", credentials)).data,
     onSuccess: handleAuthSuccess,
     onError: (error) => toast.error(getErrorMessage(error, "Login failed")),
   });
 
   const googleLoginMutation = useMutation({
-    mutationFn: async (credential) =>
+    mutationFn: async (credential: string) =>
       (await api.post("/api/user/google-login", { credential })).data,
     onSuccess: handleAuthSuccess,
     onError: (error) =>
@@ -312,7 +330,7 @@ export default function LoginPage() {
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (userData) =>
+    mutationFn: async (userData: UserData) =>
       (await api.post("/api/user/register", userData)).data,
     onSuccess: () => {
       toast.success("Account created successfully. Please log in");
@@ -338,7 +356,7 @@ export default function LoginPage() {
     return null;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const errorMessage = validate();
@@ -433,8 +451,12 @@ export default function LoginPage() {
                 placeholder="Alex"
                 autoComplete="username"
                 value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                icon={<PersonIcon sx={{ color: "text.secondary", fontSize: 20 }} />}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setUserName(e.target.value)
+                }
+                icon={
+                  <PersonIcon sx={{ color: "text.secondary", fontSize: 20 }} />
+                }
               />
             )}
 
@@ -445,7 +467,9 @@ export default function LoginPage() {
               placeholder="alex@email.com"
               autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEmail(e.target.value)
+              }
               icon={<MailIcon sx={{ color: "text.secondary", fontSize: 20 }} />}
             />
 
@@ -456,12 +480,16 @@ export default function LoginPage() {
               placeholder="••••••••"
               autoComplete={isRegister ? "new-password" : "current-password"}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setPassword(e.target.value)
+              }
               icon={<LockIcon sx={{ color: "text.secondary", fontSize: 20 }} />}
               endAdornment={
                 <InputAdornment position="end">
                   <IconButton
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                     onClick={() => setShowPassword((s) => !s)}
                     edge="end"
                     sx={{ color: "text.secondary" }}
@@ -514,7 +542,9 @@ export default function LoginPage() {
               color: "text.secondary",
             }}
           >
-            {isRegister ? "Already have an account? " : "Don't have an account? "}
+            {isRegister
+              ? "Already have an account? "
+              : "Don't have an account? "}
             <Link
               component="button"
               type="button"
